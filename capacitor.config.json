@@ -1,1 +1,5 @@
-
+{
+  "appId": "com.jotter.app",
+  "appName": "Jotter",
+  "webDir": "www"
+}
