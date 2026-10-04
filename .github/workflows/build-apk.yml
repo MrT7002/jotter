@@ -15,11 +15,47 @@ jobs:
           distribution: temurin
           java-version: 17
       - run: npm install
+      - name: Bundle offline OCR
+        run: |
+          mkdir -p www/ocr/lang
+          cp node_modules/tesseract.js/dist/tesseract.min.js node_modules/tesseract.js/dist/worker.min.js www/ocr/ || true
+          cp node_modules/tesseract.js-core/*.js www/ocr/ || true
+          cp node_modules/tesseract.js-core/*.wasm www/ocr/ || true
+          cp node_modules/@tesseract.js-data/eng/4.0.0_best_int/eng.traineddata.gz www/ocr/lang/ || true
       - run: npx cap add android
+      - name: Create alarm sounds
+        run: |
+          python3 - <<'PYEOF'
+          import wave, struct, math, os
+          D = "android/app/src/main/res/raw"
+          os.makedirs(D, exist_ok=True)
+          R = 22050
+          def tone(f, d, v=0.8):
+              n = int(R * d)
+              return [v * math.sin(2 * math.pi * f * i / R) * min(1, i / 200, (n - i) / 200) for i in range(n)]
+          def gap(d):
+              return [0] * int(R * d)
+          def save(name, s):
+              w = wave.open(D + "/" + name + ".wav", "wb")
+              w.setnchannels(1); w.setsampwidth(2); w.setframerate(R)
+              w.writeframes(b"".join(struct.pack("<h", int(max(-1, min(1, x)) * 32000)) for x in s))
+              w.close()
+          beep = []
+          for _ in range(30):
+              beep += tone(1000, .18) + gap(.12)
+          chime = []
+          for _ in range(5):
+              for f in (523, 659, 784, 1047):
+                  chime += tone(f, .35, .7) + gap(.05)
+          pulse = []
+          for i in range(60):
+              pulse += tone(600 + (i % 4) * 150, .12) + gap(.04)
+          save("alarm_beep", beep); save("alarm_chime", chime); save("alarm_pulse", pulse)
+          PYEOF
       - name: Add alarm and notification permissions
         run: |
           M=android/app/src/main/AndroidManifest.xml
-          sed -i 's#<application#<uses-permission android:name="android.permission.POST_NOTIFICATIONS"/><uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/><uses-permission android:name="android.permission.USE_EXACT_ALARM"/><uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/><uses-permission android:name="android.permission.VIBRATE"/><application#' $M
+          sed -i 's#<application#<uses-permission android:name="android.permission.POST_NOTIFICATIONS"/><uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/><uses-permission android:name="android.permission.USE_EXACT_ALARM"/><uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/><uses-permission android:name="android.permission.VIBRATE"/><uses-permission android:name="android.permission.CAMERA"/><uses-feature android:name="android.hardware.camera" android:required="false"/><application#' $M
       - run: npx cap sync android
       - run: cd android && chmod +x gradlew && ./gradlew assembleDebug
       - uses: actions/upload-artifact@v4
