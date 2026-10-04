@@ -45,6 +45,7 @@ textarea{min-height:48vh;resize:vertical;line-height:1.5}
 #banner{position:fixed;left:12px;right:12px;top:calc(env(safe-area-inset-top,0px) + 8px);max-width:616px;margin:0 auto;background:var(--hi);color:#14221E;border-radius:10px;padding:12px 14px;display:none;z-index:9}
 #banner .row{margin-top:8px}
 #banner button{background:#14221E;color:#fff;border:0;border-radius:8px;padding:8px 12px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}.tile{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px}.tile b{display:block;font-size:30px;font-weight:800}.tile span{color:var(--mute);font-size:14px}.seg{display:flex;gap:6px;margin-bottom:8px}.seg button{flex:1;padding:10px 4px;border:1px solid var(--line);border-radius:8px;background:var(--card);font-weight:600}.seg button.on{background:var(--acc);color:var(--accink);border-color:var(--acc)}
 .hint{font-size:14px;color:var(--mute);margin:6px 0 0}
 </style>
 </head>
@@ -54,21 +55,26 @@ textarea{min-height:48vh;resize:vertical;line-height:1.5}
 <nav><div id="tabs"></div></nav>
 <script>
 (function(){
-var KEY="jotter-v1",tab="notes",openId=null,q="",S={notes:[],tasks:[],rem:[],ev:[]};
+var KEY="jotter-v1",tab="home",openId=null,q="",S={notes:[],tasks:[],rem:[],ev:[],al:[],cur:"all"};
 try{var raw=localStorage.getItem(KEY);if(raw)S=Object.assign(S,JSON.parse(raw))}catch(e){}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}sync()}
-var LN=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.LocalNotifications,syncT;
+var SN=["beep","chime","pulse"],LN=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.LocalNotifications,syncT;
 function sync(){if(!LN)return;clearTimeout(syncT);syncT=setTimeout(doSync,400)}
 async function doSync(){try{
 var p=await LN.checkPermissions();if(p.display!=="granted"){p=await LN.requestPermissions();if(p.display!=="granted")return}
 var pend=await LN.getPending();if(pend.notifications.length)await LN.cancel({notifications:pend.notifications.map(function(n){return{id:n.id}})});
+if(!window.alReady){window.alReady=1;
+for(var si=0;si<3;si++){try{await LN.createChannel({id:"alarm_"+SN[si],name:"Alarm sound: "+SN[si],importance:5,vibration:true,sound:"alarm_"+SN[si]+".wav"})}catch(e){}}
+try{await LN.registerActionTypes({types:[{id:"ALARM",actions:[{id:"snooze",title:"Snooze 5 min"},{id:"dismiss",title:"Dismiss"}]}]})}catch(e){}
+try{LN.addListener("localNotificationActionPerformed",function(ev){if(ev.actionId==="snooze"){addSnooze((ev.notification.extra&&ev.notification.extra.label)||"Alarm")}})}catch(e){}}
 var items=[],now=Date.now();
 S.rem.forEach(function(r){if(r.done)return;var step=r.rep==="daily"?864e5:r.rep==="weekly"?6048e5:0,n=r.rep==="daily"?14:r.rep==="weekly"?8:1,t=r.at;
 if(step)while(t<=now)t+=step;
 for(var i=0;i<n;i++){if(t>now)items.push({title:"Reminder",body:r.t,at:t});t+=step}});
 for(var d=0;d<14;d++){var day=new Date();day.setDate(day.getDate()+d);S.ev.forEach(function(e){if(!occurs(e,day))return;var t=new Date(ds(day)+"T"+e.tm).getTime()-e.pre*6e4;if(t>now)items.push({title:"Coming up",body:e.t+" at "+e.tm,at:t})})}
-items.sort(function(a,b){return a.at-b.at});items=items.slice(0,60);
-if(items.length)await LN.schedule({notifications:items.map(function(x,i){return{id:i+1,title:x.title,body:x.body,schedule:{at:new Date(x.at),allowWhileIdle:true}}})});
+for(var d2=0;d2<14;d2++){var day2=new Date();day2.setDate(day2.getDate()+d2);S.al.forEach(function(a){if(!aOcc(a,day2))return;var t=new Date(ds(day2)+"T"+a.tm).getTime();if(t>now)items.push({title:"Alarm",body:a.t,at:t,ch:"alarm_"+(a.s||"beep")})})}
+items.sort(function(a,b){return a.at-b.at});items=items.slice(0,100);
+if(items.length)await LN.schedule({notifications:items.map(function(x,i){var o={id:i+1,title:x.title,body:x.body,schedule:{at:new Date(x.at),allowWhileIdle:true}};if(x.ch){o.channelId=x.ch;o.actionTypeId="ALARM";o.extra={label:x.body}}return o})});
 }catch(e){}}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
 function esc(s){return String(s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
@@ -77,19 +83,20 @@ function fmt(t){return new Date(t).toLocaleString([], {weekday:"short",day:"nume
 function pad(n){return String(n).padStart(2,"0")}
 function localInput(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+"T"+pad(d.getHours())+":"+pad(d.getMinutes())}
 
-var TABS=[["notes","Notes"],["tasks","Tasks"],["rem","Reminders"],["sched","Schedule"],["search","Search"]];
+var TABS=[["home","Home"],["notes","Notes"],["tasks","Tasks"],["plan","Plan"],["search","Search"]];
 function drawTabs(){$("tabs").innerHTML=TABS.map(function(t){return '<button data-t="'+t[0]+'" class="'+(tab===t[0]?"on":"")+'">'+t[1]+'</button>'}).join("")}
 $("tabs").addEventListener("click",function(e){var t=e.target.getAttribute("data-t");if(t){tab=t;openId=null;render()}});
 
-function render(){drawTabs();var f={notes:openId?editor:notesView,tasks:tasksView,rem:remView,sched:schedView,search:searchView}[tab];f();window.scrollTo(0,0)}
+function render(){drawTabs();var f={notes:openId?editor:notesView,tasks:tasksView,home:homeView,plan:planView,search:searchView}[tab];f();window.scrollTo(0,0)}
 
 /* NOTES */
 function noteCard(n){return '<div class="item note'+(n.pin?' pin':'')+'" data-open="'+n.id+'"><b>'+esc(n.t||"Untitled note")+'</b><span class="pre">'+esc(n.b||"No text yet")+'</span></div>'}
 function notesView(){
-var list=S.notes.slice().sort(function(a,b){return (b.pin|0)-(a.pin|0)||b.ts-a.ts});
-$("app").innerHTML='<h1>Notes</h1><p class="sub">'+S.notes.length+' saved on this phone</p><button class="btn" id="newn">New note</button>'+
+var list=S.notes.filter(inWs).sort(function(a,b){return (b.pin|0)-(a.pin|0)||b.ts-a.ts});
+$("app").innerHTML='<h1>Notes</h1><p class="sub">'+list.length+' here</p>'+wsBar()+'<div class="row" style="margin-bottom:8px"><button class="btn" id="newn">New note</button><button class="ghost" id="sc">Scan</button></div>'+tplSel()+
 (list.length?list.map(noteCard).join(""):'<p class="empty">No notes yet. Tap New note, then type or use the mic to speak.</p>');
-$("newn").onclick=function(){var n={id:uid(),t:"",b:"",pin:false,ts:Date.now()};S.notes.push(n);save();openId=n.id;render()};
+bindWs();$("sc").onclick=scan;var tp=$("tp");tp.onchange=function(){if(!tp.value)return;var a=tp.value.split(":"),t=TPL[a[0]][+a[1]],n={id:uid(),t:t[0],b:t[1],pin:false,ts:Date.now(),w:a[0]};S.notes.push(n);save();openId=n.id;render()};
+$("newn").onclick=function(){var n={id:uid(),t:"",b:"",pin:false,ts:Date.now(),w:nw()};S.notes.push(n);save();openId=n.id;render()};
 $("app").onclick=function(e){var c=e.target.closest("[data-open]");if(c){openId=c.getAttribute("data-open");render()}};
 }
 var rec=null;
@@ -122,10 +129,10 @@ return t.split(/\s*(?:,|;|\n|\.\s|\band then\b|\band\b)\s*/i).map(function(s){re
 }
 function taskRow(t){return '<div class="item'+(t.done?' done':'')+'"><input type="checkbox" class="chk" data-c="'+t.id+'"'+(t.done?' checked':'')+' aria-label="Mark done"><div class="grow">'+esc(t.t)+'</div><button class="x" data-d="'+t.id+'" aria-label="Delete task">Delete</button></div>'}
 function tasksView(){
-var open=S.tasks.filter(function(t){return !t.done}),done=S.tasks.filter(function(t){return t.done});
-$("app").innerHTML='<h1>Tasks</h1><p class="sub">'+open.length+' to do</p><div class="row"><input id="ti" placeholder="e.g. Tomorrow I need to buy cement, call my client and finish my report"><button class="btn" id="ta">Add</button></div><p class="hint">Type one task or several in a sentence. They are split into separate tasks.</p>'+
+var open=S.tasks.filter(function(t){return !t.done&&inWs(t)}),done=S.tasks.filter(function(t){return t.done&&inWs(t)});
+$("app").innerHTML='<h1>Tasks</h1><p class="sub">'+open.length+' to do</p>'+wsBar()+'<div class="row"><input id="ti" placeholder="e.g. Tomorrow I need to buy cement, call my client and finish my report"><button class="btn" id="ta">Add</button></div><p class="hint">Type one task or several in a sentence. They are split into separate tasks.</p>'+
 (open.length?open.map(taskRow).join(""):'<p class="empty">Nothing to do. Add a task above.</p>')+(done.length?'<h2>Done ('+done.length+')</h2>'+done.map(taskRow).join(""):"");
-function add(){var v=$("ti").value.trim();if(!v)return;splitTasks(v).forEach(function(s){S.tasks.push({id:uid(),t:s,done:false})});save();tasksView()}
+bindWs();function add(){var v=$("ti").value.trim();if(!v)return;splitTasks(v).forEach(function(s){S.tasks.push({id:uid(),t:s,done:false,w:nw()})});save();tasksView()}
 $("ta").onclick=add;$("ti").onkeydown=function(e){if(e.key==="Enter")add()};
 $("app").onclick=function(e){var c=e.target.getAttribute("data-c"),d=e.target.getAttribute("data-d");
 if(c){S.tasks.forEach(function(t){if(t.id===c)t.done=!t.done});save();tasksView()}
@@ -134,7 +141,7 @@ if(d){S.tasks=S.tasks.filter(function(t){return t.id!==d});save();tasksView()}};
 
 /* REMINDERS */
 function remRow(r){var late=!r.done&&r.at<Date.now();return '<div class="item'+(r.done?' done':'')+'"><input type="checkbox" class="chk" data-c="'+r.id+'"'+(r.done?' checked':'')+' aria-label="Mark done"><div class="grow"><b>'+esc(r.t)+'</b><div class="'+(late?'late':'pre')+'">'+fmt(r.at)+(r.rep!=="once"?' · repeats '+r.rep:'')+(late?' · overdue':'')+'</div></div><button class="x" data-d="'+r.id+'" aria-label="Delete reminder">Delete</button></div>'}
-function remView(){
+function remV(){
 var open=S.rem.filter(function(r){return !r.done}).sort(function(a,b){return a.at-b.at}),done=S.rem.filter(function(r){return r.done});
 var d=new Date(Date.now()+3600000);d.setMinutes(0);
 $("app").innerHTML='<h1>Reminders</h1><p class="sub">Alerts show while the app is open.</p><input id="rt" placeholder="e.g. Pay electricity bill" style="margin-bottom:8px"><div class="row" style="margin-bottom:8px"><input type="datetime-local" id="rw" value="'+localInput(d)+'"><select id="rr" style="width:auto"><option value="once">Once</option><option value="daily">Daily</option><option value="weekly">Weekly</option></select></div><button class="btn" id="ra">Add reminder</button>'+
@@ -158,14 +165,15 @@ if(navigator.vibrate){try{navigator.vibrate([200,100,200])}catch(e){}}
 var b=$("banner");b.style.display="block";b.innerHTML='<b>'+esc(r.t)+'</b><div class="row"><button data-s="'+r.id+'">Snooze 10 min</button><button data-f="'+r.id+'">Mark done</button></div>';
 }
 $("banner").onclick=function(e){var s=e.target.getAttribute("data-s"),f=e.target.getAttribute("data-f");
-if(e.target.getAttribute("data-x"))$("banner").style.display="none";if(s)snooze(s);if(f)complete(f);if(s||f){$("banner").style.display="none";if(tab==="rem")remView()}};
+if(e.target.getAttribute("data-x"))$("banner").style.display="none";
+var z=e.target.getAttribute("data-z");if(z){addSnooze(z);$("banner").style.display="none"}if(s)snooze(s);if(f)complete(f);if(s||f){$("banner").style.display="none";if(tab==="plan")render()}};
 setInterval(check,15000);check();
 
 
 /* SCHEDULE */
 function ds(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())}
 function occurs(e,day){var d=ds(day);if(e.rep==="once")return e.d===d;if(d<e.d)return false;if(e.rep==="daily")return true;return new Date(e.d+"T00:00").getDay()===day.getDay()}
-function schedView(){
+function schedV(){
 var days=[];for(var i=0;i<7;i++){var d=new Date();d.setDate(d.getDate()+i);days.push(d)}
 var h="";days.forEach(function(d,i){
 var list=S.ev.filter(function(e){return occurs(e,d)}).sort(function(a,b){return a.tm<b.tm?-1:1});
@@ -187,6 +195,82 @@ if(window.Notification&&Notification.permission==="granted"){try{new Notificatio
 if(navigator.vibrate){try{navigator.vibrate([200,100,200])}catch(x){}}
 var b=$("banner");b.style.display="block";b.innerHTML='<b>'+esc(msg)+'</b><div class="row"><button data-x="1">Dismiss</button></div>';return}}}
 setInterval(checkEv,15000);checkEv();
+
+/* WORKSPACES */
+var WS=[["all","All"],["general","General"],["construction","Construction"],["business","Business"],["office","Office"],["education","Education"]];
+var TPL={general:[["Daily journal","Date:\nWhat happened:\nTo do tomorrow:\n"]],
+construction:[["Site report","Date:\nSite:\nWeather:\nWorkers present:\nWork done today:\nMaterials used:\nIssues:\n"],["Materials list","Item - Quantity - Supplier - Cost\n"],["Site observations","Date:\nLocation:\nObservation:\nAction needed:\n"]],
+business:[["Customer order","Customer:\nPhone:\nItems:\nQuantity:\nPrice:\nPayment status:\nDelivery date:\n"],["Expenses","Date - Item - Amount\n"],["Supplier notes","Supplier:\nContact:\nProducts and prices:\n"]],
+office:[["Meeting notes","Meeting:\nDate:\nAttendees:\nDiscussion:\nDecisions:\nAction items:\n"],["Project plan","Project:\nGoal:\nDeadline:\nSteps:\n"]],
+education:[["Lecture notes","Course:\nTopic:\nKey points:\nQuestions:\n"],["Assignment","Course:\nTitle:\nDue date:\nRequirements:\nProgress:\n"],["Revision notes","Topic:\nSummary:\nThings to remember:\n"]]};
+function nw(){return S.cur==="all"?"general":S.cur}
+function inWs(x){return S.cur==="all"||(x.w||"general")===S.cur}
+function wsBar(){return '<select id="ws" aria-label="Workspace" style="margin-bottom:12px">'+WS.map(function(w){return '<option value="'+w[0]+'"'+(S.cur===w[0]?' selected':'')+'>'+(w[0]==="all"?"All workspaces":w[1]+" workspace")+'</option>'}).join("")+'</select>'}
+function bindWs(){var e=$("ws");if(e)e.onchange=function(){S.cur=e.value;save();render()}}
+function tplSel(){var ks=S.cur==="all"?Object.keys(TPL):[S.cur],o='<option value="">Start from a template…</option>';ks.forEach(function(k){(TPL[k]||[]).forEach(function(t,i){o+='<option value="'+k+':'+i+'">'+esc(t[0])+(S.cur==="all"?" ("+k+")":"")+'</option>'})});return '<select id="tp">'+o+'</select>'}
+
+/* HOME */
+function homeView(){
+var tk=S.tasks.filter(inWs),dn=tk.filter(function(t){return t.done}).length,op=tk.length-dn;
+var nn=S.notes.filter(inWs).length,rm=S.rem.filter(function(r){return !r.done}).length,td=S.ev.filter(function(e){return occurs(e,new Date())}).length,al=S.al.filter(function(a){return a.on}).length;
+function tile(n,l){return '<div class="tile"><b>'+n+'</b><span>'+l+'</span></div>'}
+var nx=S.rem.filter(function(r){return !r.done&&r.at>Date.now()}).sort(function(a,b){return a.at-b.at})[0];
+$("app").innerHTML='<h1>Today</h1><p class="sub">'+new Date().toLocaleDateString([], {weekday:"long",day:"numeric",month:"long"})+'</p>'+wsBar()+'<div class="grid">'+tile(op,"tasks left")+tile(dn,"tasks done")+tile(nn,"notes")+tile(td,"events today")+tile(rm,"reminders pending")+tile(al,"alarms on")+'</div>'+(nx?'<div class="item"><div class="grow"><b>Next reminder</b><div class="pre">'+esc(nx.t)+' · '+fmt(nx.at)+'</div></div></div>':'')+'<button class="btn" id="sc" style="margin-top:8px">Scan a document</button>';
+bindWs();$("sc").onclick=scan}
+
+/* PLAN (reminders, schedule, alarms) */
+var sub="rem";
+function seg(c){sub=c;var h='<div class="seg" id="seg">'+[["rem","Reminders"],["sched","Schedule"],["al","Alarms"]].map(function(x){return '<button data-p="'+x[0]+'" class="'+(c===x[0]?"on":"")+'">'+x[1]+'</button>'}).join("")+'</div>';$("app").insertAdjacentHTML("afterbegin",h);$("seg").onclick=function(e){var p=e.target.getAttribute("data-p");if(p){sub=p;render()}}}
+function remView(){remV();seg("rem")}
+function schedView(){schedV();seg("sched")}
+function alarmView(){alarmV();seg("al")}
+function planView(){({rem:remView,sched:schedView,al:alarmView})[sub]()}
+
+/* ALARMS */
+function addSnooze(z){var zt=new Date(Date.now()+300000);S.al.push({id:uid(),t:z,tm:pad(zt.getHours())+":"+pad(zt.getMinutes()),d:ds(zt),rep:"once",on:true,f:{},s:"beep",c:Date.now()});save()}
+function aOcc(a,day){if(!a.on)return false;var d=ds(day);if(a.rep==="once")return a.d===d;if(a.rep==="daily")return true;var w=day.getDay();return w>0&&w<6}
+function alarmV(){
+S.al.forEach(function(a){if(a.rep==="once"&&a.on&&new Date(a.d+"T"+a.tm).getTime()<Date.now()-120000)a.on=false});
+var list=S.al.slice().sort(function(a,b){return a.tm<b.tm?-1:1}),rn={once:"Once",daily:"Every day",weekdays:"Mon to Fri"};
+$("app").innerHTML='<h1>Alarms</h1><p class="sub">Rings as a loud notification, even when the app is closed.</p><input id="at" placeholder="Label, e.g. Wake up" style="margin-bottom:8px"><div class="row" style="margin-bottom:8px"><input type="time" id="am" value="06:30"><select id="ar"><option value="once">Once</option><option value="daily">Every day</option><option value="weekdays">Mon to Fri</option></select></div><select id="as" aria-label="Alarm sound" style="margin-bottom:8px"><option value="beep">Sound: Beep</option><option value="chime">Sound: Chime</option><option value="pulse">Sound: Pulse</option></select><button class="btn" id="aa">Add alarm</button>'+
+(list.length?list.map(function(a){return '<div class="item'+(a.on?'':' done')+'"><input type="checkbox" class="chk" data-c="'+a.id+'"'+(a.on?' checked':'')+' aria-label="Alarm on"><div class="grow"><b style="font-size:22px">'+a.tm+'</b><div class="pre">'+esc(a.t||"Alarm")+' · '+rn[a.rep]+' · '+(a.s||'beep')+'</div></div><button class="x" data-d="'+a.id+'" aria-label="Delete alarm">Delete</button></div>'}).join(""):'<p class="empty">No alarms yet.</p>')+histHtml();
+function histHtml(){var h=[];for(var k=0;k<=3;k++){var dy=new Date();dy.setDate(dy.getDate()-k);S.al.forEach(function(a){if(a.rep==="once"||!a.on)return;var t=new Date(ds(dy)+"T"+a.tm).getTime();if(t<Date.now()&&t>=(a.c||0)&&aOcc(a,dy))h.push({t:t,l:a.t})})}
+h.sort(function(x,y){return y.t-x.t});if(!h.length)return"";return '<h2>Rang recently</h2>'+h.slice(0,8).map(function(x){return '<div class="item"><div class="grow"><b>'+esc(x.l)+'</b><div class="pre">'+fmt(x.t)+'</div></div></div>'}).join("")}
+function nextDay(m){var d=new Date();if(m<=pad(d.getHours())+":"+pad(d.getMinutes()))d.setDate(d.getDate()+1);return ds(d)}
+$("aa").onclick=function(){var m=$("am").value;if(!m){alert("Pick a time.");return}S.al.push({id:uid(),t:$("at").value.trim()||"Alarm",tm:m,d:nextDay(m),rep:$("ar").value,on:true,f:{},s:$("as").value,c:Date.now()});save();alarmView()};
+$("app").onclick=function(e){var c=e.target.getAttribute("data-c"),d=e.target.getAttribute("data-d");
+if(c){S.al.forEach(function(a){if(a.id===c){a.on=!a.on;if(a.on)a.d=nextDay(a.tm)}});save();alarmView()}
+if(d){S.al=S.al.filter(function(a){return a.id!==d});save();alarmView()}};
+}
+function checkAl(){var now=Date.now(),day=new Date(),key=ds(day);
+for(var i=0;i<S.al.length;i++){var a=S.al[i];if(!aOcc(a,day))continue;var at=new Date(key+"T"+a.tm).getTime();
+if(now>=at&&now<at+120000&&!(a.f&&a.f[key])){a.f=a.f||{};a.f[key]=1;save();
+if(navigator.vibrate){try{navigator.vibrate([500,200,500,200,500])}catch(x){}}
+var b=$("banner");b.style.display="block";b.innerHTML='<b>Alarm: '+esc(a.t)+' · '+a.tm+'</b><div class="row"><button data-z="'+esc(a.t)+'">Snooze 5 min</button><button data-x="1">Dismiss</button></div>';return}}}
+setInterval(checkAl,15000);checkAl();
+
+/* SCANNER */
+function msg(t){var b=$("banner");b.style.display="block";b.innerHTML="<b>"+esc(t)+'</b><div class="row"><button data-x="1">OK</button></div>'}
+var OCRP=location.origin+"/ocr/";
+function loadOcr(){return new Promise(function(res,rej){if(window.Tesseract)return res();
+function cdn(){var c=document.createElement("script");c.src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";c.onload=res;c.onerror=function(){rej(new Error("net"))};document.head.appendChild(c)}
+var l=document.createElement("script");l.src=OCRP+"tesseract.min.js";l.onload=function(){window.OCRLOCAL=1;res()};l.onerror=cdn;document.head.appendChild(l)})}
+function prep(src){return new Promise(function(res){var im=new Image();im.onload=function(){var m=Math.max(im.width,im.height),k=m>2200?2200/m:1,w=Math.round(im.width*k),h=Math.round(im.height*k),c=document.createElement("canvas");c.width=w;c.height=h;var x=c.getContext("2d");x.drawImage(im,0,0,w,h);
+try{var d=x.getImageData(0,0,w,h),a=d.data,lo=255,hi=0,n,g;for(n=0;n<a.length;n+=4){g=a[n]*.3+a[n+1]*.59+a[n+2]*.11;a[n]=a[n+1]=a[n+2]=g;if(g<lo)lo=g;if(g>hi)hi=g}var sc=255/Math.max(1,hi-lo);for(n=0;n<a.length;n+=4){g=(a[n]-lo)*sc;a[n]=a[n+1]=a[n+2]=g}x.putImageData(d,0,0)}catch(e){}
+res(c.toDataURL("image/png"))};im.onerror=function(){res(src)};im.src=src})}
+function scan(){
+var CAM=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.Camera;
+if(CAM){CAM.getPhoto({quality:85,resultType:"dataUrl",source:"PROMPT",correctOrientation:true}).then(function(p){ocr(p.dataUrl)}).catch(function(){});return}
+var i=document.createElement("input");i.type="file";i.accept="image/*";i.onchange=function(){var f=i.files[0];if(!f)return;var r=new FileReader();r.onload=function(){ocr(r.result)};r.readAsDataURL(f)};i.click()}
+function ocr(img,retry){
+msg("Reading text… this can take a minute.");
+loadOcr().then(function(){return prep(img)}).then(function(im){
+var o=window.OCRLOCAL?{workerPath:OCRP+"worker.min.js",corePath:OCRP,langPath:OCRP+"lang",workerBlobURL:false}:{};
+return Tesseract.recognize(im,"eng",o)}).then(function(r){
+var text=((r.data&&r.data.text)||"").trim();if(!text){msg("No text found. Try a clearer, well-lit photo.");return}
+var n={id:uid(),t:"Scan "+new Date().toLocaleDateString(),b:text,pin:false,ts:Date.now(),w:nw()};S.notes.push(n);save();
+$("banner").style.display="none";openId=n.id;tab="notes";render()
+}).catch(function(){if(window.OCRLOCAL&&!retry){window.OCRLOCAL=0;ocr(img,1);return}msg("Could not read the image. Check your internet and try again.")})}
 
 /* SEARCH */
 function searchView(){
