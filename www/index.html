@@ -46,16 +46,18 @@ textarea{min-height:48vh;resize:vertical;line-height:1.5}
 #banner .row{margin-top:8px}
 #banner button{background:#14221E;color:#fff;border:0;border-radius:8px;padding:8px 12px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}.tile{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px}.tile b{display:block;font-size:30px;font-weight:800}.tile span{color:var(--mute);font-size:14px}.seg{display:flex;gap:6px;margin-bottom:8px}.seg button{flex:1;padding:10px 4px;border:1px solid var(--line);border-radius:8px;background:var(--card);font-weight:600}.seg button.on{background:var(--acc);color:var(--accink);border-color:var(--acc)}
+#lock{position:fixed;inset:0;background:var(--bg);z-index:30;display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;gap:12px}.att img{max-width:100%;border-radius:8px}
 .hint{font-size:14px;color:var(--mute);margin:6px 0 0}
 </style>
 </head>
 <body>
 <div id="banner" role="alert"></div>
+<div id="lock"><h1>Jotter is locked</h1><input id="lp" type="password" inputmode="numeric" maxlength="8" placeholder="Enter PIN" style="max-width:260px;text-align:center"><button class="btn" id="lu">Unlock</button><button class="ghost" id="lb" style="display:none">Use fingerprint</button><div id="lm" class="late"></div></div>
 <div id="app"></div>
 <nav><div id="tabs"></div></nav>
 <script>
 (function(){
-var KEY="jotter-v1",tab="home",openId=null,q="",S={notes:[],tasks:[],rem:[],ev:[],al:[],cur:"all"};
+var KEY="jotter-v1",tab="home",openId=null,q="",S={notes:[],tasks:[],rem:[],ev:[],al:[],rec:[],cur:"all"};
 try{var raw=localStorage.getItem(KEY);if(raw)S=Object.assign(S,JSON.parse(raw))}catch(e){}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}sync()}
 var SN=["beep","chime","pulse"],LN=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.LocalNotifications,syncT;
@@ -87,11 +89,11 @@ var TABS=[["home","Home"],["notes","Notes"],["tasks","Tasks"],["plan","Plan"],["
 function drawTabs(){$("tabs").innerHTML=TABS.map(function(t){return '<button data-t="'+t[0]+'" class="'+(tab===t[0]?"on":"")+'">'+t[1]+'</button>'}).join("")}
 $("tabs").addEventListener("click",function(e){var t=e.target.getAttribute("data-t");if(t){tab=t;openId=null;render()}});
 
-function render(){drawTabs();var f={notes:openId?editor:notesView,tasks:tasksView,home:homeView,plan:planView,search:searchView}[tab];f();window.scrollTo(0,0)}
+function render(){drawTabs();var f={notes:openId?editor:(nsub==="r"?recView:notesView),tasks:tasksView,home:homeView,plan:planView,search:searchView}[tab];f();window.scrollTo(0,0)}
 
 /* NOTES */
-function noteCard(n){return '<div class="item note'+(n.pin?' pin':'')+'" data-open="'+n.id+'"><b>'+esc(n.t||"Untitled note")+'</b><span class="pre">'+esc(n.b||"No text yet")+'</span></div>'}
-function notesView(){
+function noteCard(n){return '<div class="item note'+(n.pin?' pin':'')+'" data-open="'+n.id+'"><b>'+(n.pv?'Private note':esc(n.t||"Untitled note"))+'</b><span class="pre">'+(n.pv?'Locked with your PIN':esc(n.b||"No text yet"))+(n.a&&n.a.length?' · '+n.a.length+' attached':'')+'</span></div>'}
+function notesV(){
 var list=S.notes.filter(inWs).sort(function(a,b){return (b.pin|0)-(a.pin|0)||b.ts-a.ts});
 $("app").innerHTML='<h1>Notes</h1><p class="sub">'+list.length+' here</p>'+wsBar()+'<div class="row" style="margin-bottom:8px"><button class="btn" id="newn">New note</button><button class="ghost" id="sc">Scan</button></div>'+tplSel()+
 (list.length?list.map(noteCard).join(""):'<p class="empty">No notes yet. Tap New note, then type or use the mic to speak.</p>');
@@ -102,14 +104,21 @@ $("app").onclick=function(e){var c=e.target.closest("[data-open]");if(c){openId=
 var rec=null;
 function editor(){
 var n=S.notes.filter(function(x){return x.id===openId})[0];if(!n){openId=null;return notesView()}
+if(n.pv){if(!KEY){$("app").innerHTML='<p class="empty">Unlock the app with your PIN to open private notes.</p>';return}
+$("app").innerHTML='<p class="empty">Unlocking…</p>';dec(n.enc).then(function(p){editor2(n,p)}).catch(function(){$("app").innerHTML='<p class="empty">Could not open this private note.</p>'});return}
+editor2(n,n)}
+function editor2(n,cur){if(n.pv&&!cur.a)cur.a=[];
 var SR=window.SpeechRecognition||window.webkitSpeechRecognition,NSR=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.SpeechRecognition;
 $("app").innerHTML='<div class="bar"><button class="ghost" id="back">Back</button><button class="ghost" id="pinb">'+(n.pin?"Unpin":"Pin")+'</button>'+((SR||NSR)?'<button class="ghost" id="mic">Speak</button>':'')+'<button class="ghost" id="del">Delete</button></div>'+
-'<input id="nt" placeholder="Title" value="'+esc(n.t)+'" style="font-weight:600;margin-bottom:8px"><textarea id="nb" placeholder="Write or speak your note">'+esc(n.b)+'</textarea><p class="hint" id="st">Saves automatically.</p>';
-function touch(){n.t=$("nt").value;n.b=$("nb").value;n.ts=Date.now();save();$("st").textContent="Saved."}
-$("nt").oninput=touch;$("nb").oninput=touch;
-$("back").onclick=function(){stopRec();openId=null;render()};
+'<input id="nt" placeholder="Title" value="'+esc(cur.t)+'" style="font-weight:600;margin-bottom:8px"><textarea id="nb" placeholder="Write or speak your note">'+esc(cur.b)+'</textarea><p class="hint" id="st">Saves automatically.</p><div class="bar" style="margin-top:12px"><button class="ghost" id="ph">Photo</button><button class="ghost" id="fl">File</button><button class="ghost" id="vn">Voice</button><button class="ghost" id="pv">'+(n.pv?'Make public':'Make private')+'</button></div><div id="att"></div>';
+var encT=null;
+function flush(){clearTimeout(encT);if(!n.pv)return Promise.resolve();return enc({t:cur.t,b:cur.b,a:cur.a||[]}).then(function(e){n.enc=e;save()})}
+function touch(){cur.t=$("nt").value;cur.b=$("nb").value;n.ts=Date.now();
+if(n.pv){clearTimeout(encT);$("st").textContent="Saving…";encT=setTimeout(function(){flush().then(function(){var t=$("st");if(t)t.textContent="Saved and encrypted."})},400)}else{save();$("st").textContent="Saved."}}
+$("nt").oninput=touch;$("nb").oninput=touch;bindAtt(n,cur,flush);
+$("back").onclick=function(){stopRec();(window.stopV?window.stopV():Promise.resolve()).then(flush).then(function(){openId=null;render()})};
 $("pinb").onclick=function(){n.pin=!n.pin;save();render()};
-$("del").onclick=function(){if(confirm("Delete this note?")){stopRec();S.notes=S.notes.filter(function(x){return x!==n});save();openId=null;render()}};
+$("del").onclick=function(){if(confirm("Delete this note?")){stopRec();(cur.a||[]).forEach(function(a){fdel(a.id)});S.notes=S.notes.filter(function(x){return x!==n});save();openId=null;render()}};
 if(SR||NSR)$("mic").onclick=function(){
 if(NSR){NSR.requestPermissions().then(function(p){if(p.speechRecognition!=="granted"){$("st").textContent="Allow the microphone for Jotter in phone Settings, then try again.";return}
 return NSR.start({language:navigator.language||"en-US",maxResults:1,prompt:"Speak now",partialResults:false,popup:true}).then(function(r){var t=((r&&r.matches&&r.matches[0])||"").trim();if(t){$("nb").value+=($("nb").value&&!/\s$/.test($("nb").value)?" ":"")+t;touch()}})}).catch(function(){$("st").textContent="Voice input did not work. Try again."});return}
@@ -215,8 +224,8 @@ var tk=S.tasks.filter(inWs),dn=tk.filter(function(t){return t.done}).length,op=t
 var nn=S.notes.filter(inWs).length,rm=S.rem.filter(function(r){return !r.done}).length,td=S.ev.filter(function(e){return occurs(e,new Date())}).length,al=S.al.filter(function(a){return a.on}).length;
 function tile(n,l){return '<div class="tile"><b>'+n+'</b><span>'+l+'</span></div>'}
 var nx=S.rem.filter(function(r){return !r.done&&r.at>Date.now()}).sort(function(a,b){return a.at-b.at})[0];
-$("app").innerHTML='<h1>Today</h1><p class="sub">'+new Date().toLocaleDateString([], {weekday:"long",day:"numeric",month:"long"})+'</p>'+wsBar()+'<div class="grid">'+tile(op,"tasks left")+tile(dn,"tasks done")+tile(nn,"notes")+tile(td,"events today")+tile(rm,"reminders pending")+tile(al,"alarms on")+'</div>'+(nx?'<div class="item"><div class="grow"><b>Next reminder</b><div class="pre">'+esc(nx.t)+' · '+fmt(nx.at)+'</div></div></div>':'')+'<button class="btn" id="sc" style="margin-top:8px">Scan a document</button>';
-bindWs();$("sc").onclick=scan}
+$("app").innerHTML='<h1>Today</h1><p class="sub">'+new Date().toLocaleDateString([], {weekday:"long",day:"numeric",month:"long"})+'</p>'+wsBar()+'<div class="grid">'+tile(op,"tasks left")+tile(dn,"tasks done")+tile(nn,"notes")+tile(td,"events today")+tile(rm,"reminders pending")+tile(al,"alarms on")+'</div>'+(nx?'<div class="item"><div class="grow"><b>Next reminder</b><div class="pre">'+esc(nx.t)+' · '+fmt(nx.at)+'</div></div></div>':'')+'<button class="btn" id="sc" style="margin-top:8px">Scan a document</button>'+secHtml();
+bindWs();$("sc").onclick=scan;bindSec()}
 
 /* PLAN (reminders, schedule, alarms) */
 var sub="rem";
@@ -272,6 +281,98 @@ var n={id:uid(),t:"Scan "+new Date().toLocaleDateString(),b:text,pin:false,ts:Da
 $("banner").style.display="none";openId=n.id;tab="notes";render()
 }).catch(function(){if(window.OCRLOCAL&&!retry){window.OCRLOCAL=0;ocr(img,1);return}msg("Could not read the image. Check your internet and try again.")})}
 
+/* SECURITY: PIN lock and encrypted private notes */
+var KEY=null;
+function P(n){return window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins[n]}
+function b64(u){var t="",i;u=new Uint8Array(u);for(i=0;i<u.length;i++)t+=String.fromCharCode(u[i]);return btoa(t)}
+function ub64(t){var b=atob(t),u=new Uint8Array(b.length),i;for(i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u}
+function deriveKey(pin,salt){return crypto.subtle.importKey("raw",new TextEncoder().encode(pin),"PBKDF2",false,["deriveKey"]).then(function(m){return crypto.subtle.deriveKey({name:"PBKDF2",salt:ub64(salt),iterations:150000,hash:"SHA-256"},m,{name:"AES-GCM",length:256},false,["encrypt","decrypt"])})}
+function enc(o){var iv=crypto.getRandomValues(new Uint8Array(12));return crypto.subtle.encrypt({name:"AES-GCM",iv:iv},KEY,new TextEncoder().encode(JSON.stringify(o))).then(function(c){return{iv:b64(iv),ct:b64(c)}})}
+function dec(e){return crypto.subtle.decrypt({name:"AES-GCM",iv:ub64(e.iv)},KEY,ub64(e.ct)).then(function(x){return JSON.parse(new TextDecoder().decode(x))})}
+function showLock(){$("lock").style.display="flex";$("lp").value="";$("lm").textContent="";$("lb").style.display=S.bio?"block":"none";if(S.bio)setTimeout(bioUnlock,300)}
+function bioUnlock(){var NB=P("NativeBiometric");if(!NB||!S.bio||$("lock").style.display==="none")return;NB.verifyIdentity({reason:"Unlock Jotter",title:"Unlock Jotter"}).then(function(){return NB.getCredentials({server:"com.jotter.app"})}).then(function(c){tryUnlock(c.password)}).catch(function(){})}
+function tryUnlock(pin){if(typeof pin!=="string")pin=$("lp").value;if(!pin)return;deriveKey(pin,S.pin.s).then(function(k){var o=KEY;KEY=k;return dec(S.pin.v).then(function(){$("lock").style.display="none";render()},function(){KEY=o;$("lm").textContent="Wrong PIN. Try again.";$("lp").value=""})})}
+function setPin(v){var salt=b64(crypto.getRandomValues(new Uint8Array(16))),priv=S.notes.filter(function(n){return n.pv});
+return Promise.all(priv.map(function(n){return dec(n.enc)})).then(function(pl){
+var jobs=[].concat.apply([],pl.map(function(p){return (p.a||[]).map(function(a){return fget(a.id).then(function(x){return{a:a,x:x}})})}));
+return Promise.all(jobs).then(function(files){return deriveKey(v,salt).then(function(k){KEY=k;
+return Promise.all(files.map(function(f){return fputE(f.a.id,f.x.blob,f.a.name,f.a.type)})).then(function(){return Promise.all(pl.map(function(p){return enc(p)}))}).then(function(es){priv.forEach(function(n,i){n.enc=es[i]});return enc({ok:1})}).then(function(vv){S.pin={s:salt,v:vv};save()})})})})}
+function secHtml(){return '<h2>Security</h2><div class="item" style="flex-direction:column;gap:8px"><div class="pre">'+(S.pin?'App lock is on. Private notes are encrypted with your PIN.':'Set a PIN to lock the app and encrypt private notes.')+'</div><input id="pn" type="password" inputmode="numeric" maxlength="8" placeholder="'+(S.pin?'New PIN':'PIN')+' (4 to 8 digits)"><div class="row"><button class="btn" id="ps">'+(S.pin?'Change PIN':'Set PIN')+'</button>'+(S.pin?'<button class="ghost" id="pr">Remove PIN</button>':'')+'</div>'+(S.pin?'<button class="ghost" id="bo">'+(S.bio?'Turn off fingerprint':'Turn on fingerprint')+'</button><div class="hint">To turn fingerprint on, type your current PIN in the box first.</div>':'')+'<div class="hint"><div class="hint">If you forget your PIN, private notes cannot be recovered.</div></div>'}
+function bindSec(){var ps=$("ps");if(!ps)return;
+ps.onclick=function(){var v=$("pn").value;if(!/^\d{4,8}$/.test(v)){alert("Use 4 to 8 digits.");return}setPin(v).then(function(){var NB=P("NativeBiometric");if(S.bio&&NB)return NB.setCredentials({username:"jotter",password:v,server:"com.jotter.app"})}).then(function(){alert("PIN saved.");homeView()}).catch(function(){alert("Could not save the PIN.")})};
+var pr=$("pr");if(pr)pr.onclick=function(){if(!confirm("Remove the PIN? Private notes become normal notes."))return;
+Promise.all(S.notes.filter(function(n){return n.pv}).map(function(n){return dec(n.enc).then(function(p){return Promise.all((p.a||[]).map(function(a){return fget(a.id).then(function(x){return fput(a.id,{blob:x.blob,name:a.name,type:a.type})})})).then(function(){n.t=p.t;n.b=p.b;n.a=p.a||[];delete n.enc;n.pv=false})})})).then(function(){S.pin=null;KEY=null;if(S.bio&&P("NativeBiometric")){try{P("NativeBiometric").deleteCredentials({server:"com.jotter.app"})}catch(e){}}S.bio=false;save();homeView()})};
+var bo=$("bo");if(bo)bo.onclick=function(){var NB=P("NativeBiometric");if(!NB){alert("Fingerprint is only available in the installed app.");return}
+if(S.bio){NB.deleteCredentials({server:"com.jotter.app"}).catch(function(){});S.bio=false;save();homeView();return}
+var v=$("pn").value;if(!v){alert("Type your current PIN in the box first.");return}
+deriveKey(v,S.pin.s).then(function(k){var o=KEY;KEY=k;return dec(S.pin.v).catch(function(e){KEY=o;throw e})}).then(function(){return NB.isAvailable()}).then(function(r){if(!r.isAvailable)throw 0;return NB.verifyIdentity({reason:"Turn on fingerprint unlock",title:"Jotter"})}).then(function(){return NB.setCredentials({username:"jotter",password:v,server:"com.jotter.app"})}).then(function(){S.bio=true;save();alert("Fingerprint unlock is on.");homeView()}).catch(function(){alert("Could not turn on fingerprint. Check your PIN and that a fingerprint is set up on this phone.")})}}
+
+/* FILES (IndexedDB) */
+var DBP=null;
+function idb(){return DBP||(DBP=new Promise(function(res,rej){var r=indexedDB.open("jotter-files",1);r.onupgradeneeded=function(){r.result.createObjectStore("f")};r.onsuccess=function(){res(r.result)};r.onerror=function(){rej(r.error)}}))}
+function fput(id,v){return idb().then(function(d){return new Promise(function(res,rej){var t=d.transaction("f","readwrite");t.objectStore("f").put(v,id);t.oncomplete=res;t.onerror=function(){rej(t.error)}})})}
+function fget(id){return idb().then(function(d){return new Promise(function(res,rej){var q=d.transaction("f").objectStore("f").get(id);q.onsuccess=function(){res(q.result)};q.onerror=function(){rej(q.error)}})}).then(function(v){if(!v||!v.enc)return v;return crypto.subtle.decrypt({name:"AES-GCM",iv:v.iv},KEY,v.ct).then(function(buf){return{blob:new Blob([buf],{type:v.type}),name:v.name||"",type:v.type}})})}
+function fputE(id,blob,name,type){return blob.arrayBuffer().then(function(buf){var iv=crypto.getRandomValues(new Uint8Array(12));return crypto.subtle.encrypt({name:"AES-GCM",iv:iv},KEY,buf).then(function(ct){return fput(id,{enc:1,iv:iv,ct:ct,type:type})})})}
+function cleanCache(){var FS=P("Filesystem");if(!FS)return;try{FS.readdir({path:"",directory:"CACHE"}).then(function(r){(r.files||[]).forEach(function(f){var nm=f.name||f;if(String(nm).indexOf("jotter-")===0)FS.deleteFile({path:nm,directory:"CACHE"}).catch(function(){})})}).catch(function(){})}catch(e){}}
+function fdel(id){return idb().then(function(d){return new Promise(function(res){var t=d.transaction("f","readwrite");t.objectStore("f").delete(id);t.oncomplete=res;t.onerror=res})}).catch(function(){})}
+function playInto(el,fid){fget(fid).then(function(v){var e=$(el);if(!e||!v)return;e.innerHTML='<audio controls autoplay style="width:100%" src="'+URL.createObjectURL(v.blob)+'"></audio>'})}
+function kb(x){return x>1048576?(x/1048576).toFixed(1)+" MB":Math.max(1,Math.round(x/1024))+" KB"}
+function openFile(a){var FS=P("Filesystem"),SH=P("Share");fget(a.id).then(function(v){
+if(!FS||!SH){var u=URL.createObjectURL(v.blob),l=document.createElement("a");l.href=u;l.download=a.name;l.click();return}
+var pth="jotter-"+a.name.replace(/[^\w.\-]+/g,"_"),r=new FileReader();
+r.onload=function(){FS.writeFile({path:pth,data:String(r.result).split(",")[1],directory:"CACHE"}).then(function(w){return SH.share({title:a.name,files:[w.uri]}).catch(function(){})}).then(function(){setTimeout(function(){FS.deleteFile({path:pth,directory:"CACHE"}).catch(function(){})},60000)}).catch(function(){msg("Could not open this file.")})};r.readAsDataURL(v.blob)})}
+
+/* RECORDER */
+var MR=null,chunks=[],acc=0,seg0=0,running=false,vnote=false,tick=null,nsub="n";
+function elapsed(){return acc+(running?Date.now()-seg0:0)}
+function mmss(ms){var s=Math.floor(ms/1000);return pad(Math.floor(s/60))+":"+pad(s%60)}
+function micErr(){msg("Could not start recording. Allow the microphone for Jotter in phone Settings.")}
+function recStart(){if(!navigator.mediaDevices||!window.MediaRecorder)return Promise.reject();
+return navigator.mediaDevices.getUserMedia({audio:true}).then(function(st){chunks=[];MR=new MediaRecorder(st);MR.ondataavailable=function(e){if(e.data&&e.data.size)chunks.push(e.data)};MR.start(1000);acc=0;seg0=Date.now();running=true;clearInterval(tick);
+tick=setInterval(function(){var t=$("rtm");if(t)t.textContent=mmss(elapsed());var v=$("vn");if(v&&vnote)v.textContent="Stop "+mmss(elapsed())},500)})}
+function recPause(){if(MR&&running){MR.pause();acc+=Date.now()-seg0;running=false}}
+function recResume(){if(MR&&!running){MR.resume();seg0=Date.now();running=true}}
+function recStop(){return new Promise(function(res){if(!MR)return res(null);if(running){acc+=Date.now()-seg0;running=false}var m=MR,dur=acc;
+m.onstop=function(){m.stream.getTracks().forEach(function(t){t.stop()});var b=new Blob(chunks,{type:m.mimeType||"audio/webm"});MR=null;clearInterval(tick);res({blob:b,dur:dur})};m.stop()})}
+function nseg(c){nsub=c;$("app").insertAdjacentHTML("afterbegin",'<div class="seg" id="nseg"><button data-n="n" class="'+(c==="n"?"on":"")+'">Notes</button><button data-n="r" class="'+(c==="r"?"on":"")+'">Recordings</button></div>');$("nseg").onclick=function(e){var v=e.target.getAttribute("data-n");if(v){nsub=v;render()}}}
+function notesView(){notesV();nseg("n")}
+function recView(){recV();nseg("r")}
+function recV(){
+var list=S.rec.slice().sort(function(a,b){return b.at-a.at});
+$("app").innerHTML='<h1>Recordings</h1><p class="sub">Lectures, meetings and voice memos saved on this phone.</p>'+
+(MR&&vnote?'<p class="hint">A voice note is recording inside a note. Stop it there first.</p>':(MR?'<div class="item" style="flex-direction:column;gap:8px"><b style="font-size:28px" id="rtm">'+mmss(elapsed())+'</b><div class="row"><button class="ghost" id="rp">'+(running?'Pause':'Resume')+'</button><button class="btn" id="rs">Stop and save</button></div></div>':'<button class="btn" id="rb">Record</button>'))+
+(list.length?list.map(function(r){return '<div class="item" style="flex-direction:column;gap:6px"><div class="row" style="width:100%"><div class="grow"><b>'+esc(r.t)+'</b><div class="pre">'+fmt(r.at)+' · '+mmss(r.dur)+'</div></div><button class="x" data-rn="'+r.id+'">Rename</button><button class="x" data-d="'+r.id+'">Delete</button></div><div id="pl-'+r.id+'"><button class="ghost" data-pl="'+r.id+'">Play</button></div></div>'}).join(""):'<p class="empty">No recordings yet. Tap Record to start.</p>');
+var rb=$("rb");if(rb)rb.onclick=function(){recStart().then(recView).catch(micErr)};
+var rp=$("rp");if(rp)rp.onclick=function(){if(running)recPause();else recResume();recView()};
+var rs=$("rs");if(rs)rs.onclick=function(){recStop().then(function(o){if(!o)return;var id=uid();return fput(id,{blob:o.blob,name:"recording",type:o.blob.type}).then(function(){S.rec.push({id:id,t:"Recording "+new Date().toLocaleString([], {day:"numeric",month:"short",hour:"numeric",minute:"2-digit"}),at:Date.now(),dur:o.dur,w:nw()});save();recView()})})};
+$("app").onclick=function(e){var t=e.target,pl=t.getAttribute("data-pl"),d=t.getAttribute("data-d"),rn=t.getAttribute("data-rn");
+if(pl)playInto("pl-"+pl,pl);
+if(d&&confirm("Delete this recording?")){fdel(d);S.rec=S.rec.filter(function(r){return r.id!==d});save();recView()}
+if(rn){var r=S.rec.filter(function(x){return x.id===rn})[0],v=prompt("Recording name",r.t);if(v&&v.trim()){r.t=v.trim();save();recView()}}}}
+
+/* ATTACHMENTS */
+function bindAtt(n,cur,flush){
+function draw(){var box=$("att");if(!box)return;
+box.innerHTML=(cur.a||[]).map(function(a){var im=(a.type||"").indexOf("image")===0,au=(a.type||"").indexOf("audio")===0;
+return '<div class="item att" style="flex-direction:column;gap:6px"><div class="row" style="width:100%"><div class="grow"><b>'+esc(au?"Voice note":a.name)+'</b><div class="pre">'+kb(a.size)+'</div></div>'+(im||au?'':'<button class="x" data-op="'+a.id+'">Open</button>')+'<button class="x" data-rm="'+a.id+'">Remove</button></div>'+(im?'<img data-im="'+a.id+'" alt="">':'')+(au?'<div id="pa-'+a.id+'"><button class="ghost" data-pa="'+a.id+'">Play</button></div>':'')+'</div>'}).join("");
+(cur.a||[]).forEach(function(a){if((a.type||"").indexOf("image")===0)fget(a.id).then(function(v){var im=document.querySelector('img[data-im="'+a.id+'"]');if(im&&v)im.src=URL.createObjectURL(v.blob)})})}
+function add(blob,name,type){var id=uid();return (n.pv?fputE(id,blob,name,type):fput(id,{blob:blob,name:name,type:type})).then(function(){(cur.a=cur.a||[]).push({id:id,name:name,type:type,size:blob.size});n.ts=Date.now();flush().then(function(){save();draw()})})}
+function finish(){return recStop().then(function(o){vnote=false;var v=$("vn");if(v)v.textContent="Voice";if(o)return add(o.blob,"voice-"+Date.now()+".webm",o.blob.type||"audio/webm")})}
+window.stopV=function(){return vnote?finish():Promise.resolve()};
+function pick(ac,multi){var i=document.createElement("input");i.type="file";i.accept=ac;i.multiple=multi;i.onchange=function(){Array.prototype.forEach.call(i.files,function(f){add(f,f.name,f.type||"application/octet-stream")})};i.click()}
+$("att").onclick=function(e){var t=e.target,op=t.getAttribute("data-op"),rm=t.getAttribute("data-rm"),pa=t.getAttribute("data-pa");
+if(pa)playInto("pa-"+pa,pa);
+if(op)openFile(cur.a.filter(function(x){return x.id===op})[0]);
+if(rm&&confirm("Remove this attachment?")){fdel(rm);cur.a=cur.a.filter(function(x){return x.id!==rm});flush().then(function(){save();draw()})}};
+draw();if(vnote)$("vn").textContent="Stop";
+$("ph").onclick=function(){var C=P("Camera");if(C){C.getPhoto({quality:85,resultType:"dataUrl",source:"PROMPT",correctOrientation:true}).then(function(p){return fetch(p.dataUrl).then(function(r){return r.blob()}).then(function(b){return add(b,"photo-"+Date.now()+".jpg","image/jpeg")})}).catch(function(){});return}pick("image/*",false)};
+$("fl").onclick=function(){pick("*/*",true)};
+$("vn").onclick=function(){if(vnote){finish();return}if(MR){msg("A recording is already in progress. Stop it in the Recordings tab first.");return}recStart().then(function(){vnote=true;$("vn").textContent="Stop 00:00"}).catch(micErr)};
+$("pv").onclick=function(){
+if(!n.pv){if(!S.pin||!KEY){alert("Set a PIN first on the Home tab, under Security.");return}
+Promise.all((cur.a||[]).map(function(a){return fget(a.id).then(function(v){return fputE(a.id,v.blob,a.name,a.type)})})).then(function(){return enc({t:cur.t,b:cur.b,a:cur.a||[]})}).then(function(e){n.enc=e;n.t="";n.b="";n.a=[];n.pv=true;save();render()})}
+else{Promise.all((cur.a||[]).map(function(a){return fget(a.id).then(function(v){return fput(a.id,{blob:v.blob,name:a.name,type:a.type})})})).then(function(){n.t=cur.t;n.b=cur.b;n.a=cur.a||[];delete n.enc;n.pv=false;save();render()})}}}
+
 /* SEARCH */
 function searchView(){
 $("app").innerHTML='<h1>Search</h1><p class="sub">Notes, tasks, reminders and schedule in one place.</p><input id="qi" type="search" placeholder="Try: cement" value="'+esc(q)+'"><div id="res"></div>';
@@ -288,6 +389,10 @@ $("res").innerHTML=h||'<p class="empty">Nothing found for “'+esc(q)+'”.</p>'
 $("qi").oninput=run;run();
 $("app").onclick=function(e){var c=e.target.closest("[data-open]");if(c){tab="notes";openId=c.getAttribute("data-open");render()}};
 }
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
+$("lu").onclick=tryUnlock;$("lb").onclick=bioUnlock;cleanCache();$("lp").onkeydown=function(e){if(e.key==="Enter")tryUnlock()};
+var hid=0;document.addEventListener("visibilitychange",function(){if(document.hidden){hid=Date.now()}else if(S.pin&&hid&&Date.now()-hid>20000){showLock()}});
+if(S.pin)showLock();
 render();sync();
 })();
 </script>
