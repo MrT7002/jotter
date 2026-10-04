@@ -95,15 +95,17 @@ $("app").onclick=function(e){var c=e.target.closest("[data-open]");if(c){openId=
 var rec=null;
 function editor(){
 var n=S.notes.filter(function(x){return x.id===openId})[0];if(!n){openId=null;return notesView()}
-var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-$("app").innerHTML='<div class="bar"><button class="ghost" id="back">Back</button><button class="ghost" id="pinb">'+(n.pin?"Unpin":"Pin")+'</button>'+(SR?'<button class="ghost" id="mic">Speak</button>':'')+'<button class="ghost" id="del">Delete</button></div>'+
+var SR=window.SpeechRecognition||window.webkitSpeechRecognition,NSR=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.SpeechRecognition;
+$("app").innerHTML='<div class="bar"><button class="ghost" id="back">Back</button><button class="ghost" id="pinb">'+(n.pin?"Unpin":"Pin")+'</button>'+((SR||NSR)?'<button class="ghost" id="mic">Speak</button>':'')+'<button class="ghost" id="del">Delete</button></div>'+
 '<input id="nt" placeholder="Title" value="'+esc(n.t)+'" style="font-weight:600;margin-bottom:8px"><textarea id="nb" placeholder="Write or speak your note">'+esc(n.b)+'</textarea><p class="hint" id="st">Saves automatically.</p>';
 function touch(){n.t=$("nt").value;n.b=$("nb").value;n.ts=Date.now();save();$("st").textContent="Saved."}
 $("nt").oninput=touch;$("nb").oninput=touch;
 $("back").onclick=function(){stopRec();openId=null;render()};
 $("pinb").onclick=function(){n.pin=!n.pin;save();render()};
 $("del").onclick=function(){if(confirm("Delete this note?")){stopRec();S.notes=S.notes.filter(function(x){return x!==n});save();openId=null;render()}};
-if(SR)$("mic").onclick=function(){
+if(SR||NSR)$("mic").onclick=function(){
+if(NSR){NSR.requestPermissions().then(function(p){if(p.speechRecognition!=="granted"){$("st").textContent="Allow the microphone for Jotter in phone Settings, then try again.";return}
+return NSR.start({language:navigator.language||"en-US",maxResults:1,prompt:"Speak now",partialResults:false,popup:true}).then(function(r){var t=((r&&r.matches&&r.matches[0])||"").trim();if(t){$("nb").value+=($("nb").value&&!/\s$/.test($("nb").value)?" ":"")+t;touch()}})}).catch(function(){$("st").textContent="Voice input did not work. Try again."});return}
 if(rec){stopRec();return}
 try{rec=new SR();rec.continuous=true;rec.interimResults=false;rec.lang=navigator.language||"en-US";
 rec.onresult=function(ev){for(var i=ev.resultIndex;i<ev.results.length;i++){if(ev.results[i].isFinal){var t=ev.results[i][0].transcript.trim();$("nb").value+=($("nb").value&&!/\s$/.test($("nb").value)?" ":"")+t;touch()}}};
