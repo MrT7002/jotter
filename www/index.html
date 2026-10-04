@@ -1,1 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Jotter – notes, tasks, reminders</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#E9EFEC;--card:#fff;--ink:#14221E;--mute:#5C6E68;--line:#CBD7D2;--acc:#0F6B63;--accink:#fff;--hi:#F2C230;--bad:#B3321F}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#101A17;--card:#18262A;--ink:#E6F0EC;--mute:#8CA19A;--line:#2A3D38;--acc:#4FC3B5;--accink:#08201C;--hi:#F2C230;--bad:#FF8A75}}
+:root[data-theme="dark"]{--bg:#101A17;--card:#18262A;--ink:#E6F0EC;--mute:#8CA19A;--line:#2A3D38;--acc:#4FC3B5;--accink:#08201C;--hi:#F2C230;--bad:#FF8A75}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*:before,*:after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 "Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",sans-serif}
+#app{max-width:640px;margin:0 auto;padding:16px 16px 96px}
+h1{font-size:30px;font-weight:800;margin:4px 0 2px;letter-spacing:-.02em}
+.sub{color:var(--mute);margin:0 0 16px}
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+nav div{display:flex;width:100%;max-width:640px}
+nav button{flex:1;padding:14px 4px;background:none;border:0;color:var(--mute);font:600 14px inherit;font-family:inherit;border-top:3px solid transparent}
+nav button.on{color:var(--ink);border-top-color:var(--hi)}
+input,textarea,select,button{font-family:inherit;font-size:16px;color:var(--ink)}
+input,textarea,select{width:100%;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--card)}
+input:focus,textarea:focus,select:focus,button:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+.btn{background:var(--acc);color:var(--accink);border:0;border-radius:8px;padding:12px 16px;font-weight:600}
+.ghost{background:none;border:1px solid var(--line);border-radius:8px;padding:10px 14px;color:var(--ink)}
+.row{display:flex;gap:8px;align-items:center}
+.row>input{flex:1}
+.item{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin:8px 0;display:flex;gap:12px;align-items:flex-start}
+.item.note{flex-direction:column;gap:2px;cursor:pointer}
+.item b{font-weight:600}
+.pre{color:var(--mute);font-size:14px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.pin{border-left:4px solid var(--hi)}
+.grow{flex:1;min-width:0}
+.done .grow{text-decoration:line-through;color:var(--mute)}
+.chk{width:24px;height:24px;margin-top:2px;accent-color:var(--acc);flex:none}
+.x{background:none;border:0;color:var(--mute);padding:4px 8px;font-size:15px}
+.late{color:var(--bad);font-weight:600}
+.empty{color:var(--mute);padding:24px 4px}
+h2{font-size:15px;margin:20px 0 4px;color:var(--mute);font-weight:600}
+textarea{min-height:48vh;resize:vertical;line-height:1.5}
+.bar{display:flex;gap:8px;margin:10px 0;flex-wrap:wrap}
+.rec{background:var(--bad);color:#fff;border-color:var(--bad)}
+#banner{position:fixed;left:12px;right:12px;top:calc(env(safe-area-inset-top,0px) + 8px);max-width:616px;margin:0 auto;background:var(--hi);color:#14221E;border-radius:10px;padding:12px 14px;display:none;z-index:9}
+#banner .row{margin-top:8px}
+#banner button{background:#14221E;color:#fff;border:0;border-radius:8px;padding:8px 12px}
+.hint{font-size:14px;color:var(--mute);margin:6px 0 0}
+</style>
+</head>
+<body>
+<div id="banner" role="alert"></div>
+<div id="app"></div>
+<nav><div id="tabs"></div></nav>
+<script>
+(function(){
+var KEY="jotter-v1",tab="notes",openId=null,q="",S={notes:[],tasks:[],rem:[],ev:[]};
+try{var raw=localStorage.getItem(KEY);if(raw)S=Object.assign(S,JSON.parse(raw))}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}sync()}
+var LN=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.LocalNotifications,syncT;
+function sync(){if(!LN)return;clearTimeout(syncT);syncT=setTimeout(doSync,400)}
+async function doSync(){try{
+var p=await LN.checkPermissions();if(p.display!=="granted"){p=await LN.requestPermissions();if(p.display!=="granted")return}
+var pend=await LN.getPending();if(pend.notifications.length)await LN.cancel({notifications:pend.notifications.map(function(n){return{id:n.id}})});
+var items=[],now=Date.now();
+S.rem.forEach(function(r){if(r.done)return;var step=r.rep==="daily"?864e5:r.rep==="weekly"?6048e5:0,n=r.rep==="daily"?14:r.rep==="weekly"?8:1,t=r.at;
+if(step)while(t<=now)t+=step;
+for(var i=0;i<n;i++){if(t>now)items.push({title:"Reminder",body:r.t,at:t});t+=step}});
+for(var d=0;d<14;d++){var day=new Date();day.setDate(day.getDate()+d);S.ev.forEach(function(e){if(!occurs(e,day))return;var t=new Date(ds(day)+"T"+e.tm).getTime()-e.pre*6e4;if(t>now)items.push({title:"Coming up",body:e.t+" at "+e.tm,at:t})})}
+items.sort(function(a,b){return a.at-b.at});items=items.slice(0,60);
+if(items.length)await LN.schedule({notifications:items.map(function(x,i){return{id:i+1,title:x.title,body:x.body,schedule:{at:new Date(x.at),allowWhileIdle:true}}})});
+}catch(e){}}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function $(id){return document.getElementById(id)}
+function fmt(t){return new Date(t).toLocaleString([], {weekday:"short",day:"numeric",month:"short",hour:"numeric",minute:"2-digit"})}
+function pad(n){return String(n).padStart(2,"0")}
+function localInput(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+"T"+pad(d.getHours())+":"+pad(d.getMinutes())}
 
+var TABS=[["notes","Notes"],["tasks","Tasks"],["rem","Reminders"],["sched","Schedule"],["search","Search"]];
+function drawTabs(){$("tabs").innerHTML=TABS.map(function(t){return '<button data-t="'+t[0]+'" class="'+(tab===t[0]?"on":"")+'">'+t[1]+'</button>'}).join("")}
+$("tabs").addEventListener("click",function(e){var t=e.target.getAttribute("data-t");if(t){tab=t;openId=null;render()}});
+
+function render(){drawTabs();var f={notes:openId?editor:notesView,tasks:tasksView,rem:remView,sched:schedView,search:searchView}[tab];f();window.scrollTo(0,0)}
+
+/* NOTES */
+function noteCard(n){return '<div class="item note'+(n.pin?' pin':'')+'" data-open="'+n.id+'"><b>'+esc(n.t||"Untitled note")+'</b><span class="pre">'+esc(n.b||"No text yet")+'</span></div>'}
+function notesView(){
+var list=S.notes.slice().sort(function(a,b){return (b.pin|0)-(a.pin|0)||b.ts-a.ts});
+$("app").innerHTML='<h1>Notes</h1><p class="sub">'+S.notes.length+' saved on this phone</p><button class="btn" id="newn">New note</button>'+
+(list.length?list.map(noteCard).join(""):'<p class="empty">No notes yet. Tap New note, then type or use the mic to speak.</p>');
+$("newn").onclick=function(){var n={id:uid(),t:"",b:"",pin:false,ts:Date.now()};S.notes.push(n);save();openId=n.id;render()};
+$("app").onclick=function(e){var c=e.target.closest("[data-open]");if(c){openId=c.getAttribute("data-open");render()}};
+}
+var rec=null;
+function editor(){
+var n=S.notes.filter(function(x){return x.id===openId})[0];if(!n){openId=null;return notesView()}
+var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+$("app").innerHTML='<div class="bar"><button class="ghost" id="back">Back</button><button class="ghost" id="pinb">'+(n.pin?"Unpin":"Pin")+'</button>'+(SR?'<button class="ghost" id="mic">Speak</button>':'')+'<button class="ghost" id="del">Delete</button></div>'+
+'<input id="nt" placeholder="Title" value="'+esc(n.t)+'" style="font-weight:600;margin-bottom:8px"><textarea id="nb" placeholder="Write or speak your note">'+esc(n.b)+'</textarea><p class="hint" id="st">Saves automatically.</p>';
+function touch(){n.t=$("nt").value;n.b=$("nb").value;n.ts=Date.now();save();$("st").textContent="Saved."}
+$("nt").oninput=touch;$("nb").oninput=touch;
+$("back").onclick=function(){stopRec();openId=null;render()};
+$("pinb").onclick=function(){n.pin=!n.pin;save();render()};
+$("del").onclick=function(){if(confirm("Delete this note?")){stopRec();S.notes=S.notes.filter(function(x){return x!==n});save();openId=null;render()}};
+if(SR)$("mic").onclick=function(){
+if(rec){stopRec();return}
+try{rec=new SR();rec.continuous=true;rec.interimResults=false;rec.lang=navigator.language||"en-US";
+rec.onresult=function(ev){for(var i=ev.resultIndex;i<ev.results.length;i++){if(ev.results[i].isFinal){var t=ev.results[i][0].transcript.trim();$("nb").value+=($("nb").value&&!/\s$/.test($("nb").value)?" ":"")+t;touch()}}};
+rec.onend=function(){if(rec&&$("mic")){try{rec.start()}catch(e){}}};
+rec.onerror=function(ev){$("st").textContent="Mic problem: "+ev.error+". Check microphone permission.";stopRec()};
+rec.start();$("mic").textContent="Stop";$("mic").classList.add("rec");$("st").textContent="Listening… speak now."}catch(e){$("st").textContent="Voice input is not available here."}};
+}
+function stopRec(){if(rec){var r=rec;rec=null;try{r.stop()}catch(e){}}var m=$("mic");if(m){m.textContent="Speak";m.classList.remove("rec")}}
+
+/* TASKS */
+function splitTasks(text){
+var t=text.replace(/^\s*(tomorrow|today|tonight|later|this (morning|afternoon|evening))?[, ]*(i|we)?\s*(need to|have to|must|should|want to|got to|gotta)\s+/i,"");
+return t.split(/\s*(?:,|;|\n|\.\s|\band then\b|\band\b)\s*/i).map(function(s){return s.replace(/^(to|then)\s+/i,"").trim()}).filter(Boolean).map(function(s){return s.charAt(0).toUpperCase()+s.slice(1)});
+}
+function taskRow(t){return '<div class="item'+(t.done?' done':'')+'"><input type="checkbox" class="chk" data-c="'+t.id+'"'+(t.done?' checked':'')+' aria-label="Mark done"><div class="grow">'+esc(t.t)+'</div><button class="x" data-d="'+t.id+'" aria-label="Delete task">Delete</button></div>'}
+function tasksView(){
+var open=S.tasks.filter(function(t){return !t.done}),done=S.tasks.filter(function(t){return t.done});
+$("app").innerHTML='<h1>Tasks</h1><p class="sub">'+open.length+' to do</p><div class="row"><input id="ti" placeholder="e.g. Tomorrow I need to buy cement, call my client and finish my report"><button class="btn" id="ta">Add</button></div><p class="hint">Type one task or several in a sentence. They are split into separate tasks.</p>'+
+(open.length?open.map(taskRow).join(""):'<p class="empty">Nothing to do. Add a task above.</p>')+(done.length?'<h2>Done ('+done.length+')</h2>'+done.map(taskRow).join(""):"");
+function add(){var v=$("ti").value.trim();if(!v)return;splitTasks(v).forEach(function(s){S.tasks.push({id:uid(),t:s,done:false})});save();tasksView()}
+$("ta").onclick=add;$("ti").onkeydown=function(e){if(e.key==="Enter")add()};
+$("app").onclick=function(e){var c=e.target.getAttribute("data-c"),d=e.target.getAttribute("data-d");
+if(c){S.tasks.forEach(function(t){if(t.id===c)t.done=!t.done});save();tasksView()}
+if(d){S.tasks=S.tasks.filter(function(t){return t.id!==d});save();tasksView()}};
+}
+
+/* REMINDERS */
+function remRow(r){var late=!r.done&&r.at<Date.now();return '<div class="item'+(r.done?' done':'')+'"><input type="checkbox" class="chk" data-c="'+r.id+'"'+(r.done?' checked':'')+' aria-label="Mark done"><div class="grow"><b>'+esc(r.t)+'</b><div class="'+(late?'late':'pre')+'">'+fmt(r.at)+(r.rep!=="once"?' · repeats '+r.rep:'')+(late?' · overdue':'')+'</div></div><button class="x" data-d="'+r.id+'" aria-label="Delete reminder">Delete</button></div>'}
+function remView(){
+var open=S.rem.filter(function(r){return !r.done}).sort(function(a,b){return a.at-b.at}),done=S.rem.filter(function(r){return r.done});
+var d=new Date(Date.now()+3600000);d.setMinutes(0);
+$("app").innerHTML='<h1>Reminders</h1><p class="sub">Alerts show while the app is open.</p><input id="rt" placeholder="e.g. Pay electricity bill" style="margin-bottom:8px"><div class="row" style="margin-bottom:8px"><input type="datetime-local" id="rw" value="'+localInput(d)+'"><select id="rr" style="width:auto"><option value="once">Once</option><option value="daily">Daily</option><option value="weekly">Weekly</option></select></div><button class="btn" id="ra">Add reminder</button>'+
+(open.length?open.map(remRow).join(""):'<p class="empty">No reminders. Add one above.</p>')+(done.length?'<h2>Done ('+done.length+')</h2>'+done.map(remRow).join(""):"");
+$("ra").onclick=function(){var t=$("rt").value.trim(),w=new Date($("rw").value).getTime();if(!t||isNaN(w)){alert("Enter a name and a date and time.");return}
+S.rem.push({id:uid(),t:t,at:w,rep:$("rr").value,done:false,fired:false});save();
+if(window.Notification&&Notification.permission==="default"){try{Notification.requestPermission()}catch(e){}}remView()};
+$("app").onclick=function(e){var c=e.target.getAttribute("data-c"),d=e.target.getAttribute("data-d");
+if(c){complete(c,true);remView()}
+if(d){S.rem=S.rem.filter(function(r){return r.id!==d});save();remView()}};
+}
+function complete(id,toggle){S.rem.forEach(function(r){if(r.id!==id)return;
+if(toggle&&r.done){r.done=false;r.fired=false;return}
+if(r.rep==="once"){r.done=true}else{var step=r.rep==="daily"?86400000:604800000;while(r.at<=Date.now())r.at+=step;r.fired=false}});save()}
+function snooze(id){S.rem.forEach(function(r){if(r.id===id){r.at=Date.now()+600000;r.fired=false}});save()}
+function check(){
+var now=Date.now(),due=S.rem.filter(function(r){return !r.done&&!r.fired&&r.at<=now});if(!due.length)return;
+var r=due[0];r.fired=true;save();
+if(window.Notification&&Notification.permission==="granted"){try{new Notification("Reminder",{body:r.t})}catch(e){}}
+if(navigator.vibrate){try{navigator.vibrate([200,100,200])}catch(e){}}
+var b=$("banner");b.style.display="block";b.innerHTML='<b>'+esc(r.t)+'</b><div class="row"><button data-s="'+r.id+'">Snooze 10 min</button><button data-f="'+r.id+'">Mark done</button></div>';
+}
+$("banner").onclick=function(e){var s=e.target.getAttribute("data-s"),f=e.target.getAttribute("data-f");
+if(e.target.getAttribute("data-x"))$("banner").style.display="none";if(s)snooze(s);if(f)complete(f);if(s||f){$("banner").style.display="none";if(tab==="rem")remView()}};
+setInterval(check,15000);check();
+
+
+/* SCHEDULE */
+function ds(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())}
+function occurs(e,day){var d=ds(day);if(e.rep==="once")return e.d===d;if(d<e.d)return false;if(e.rep==="daily")return true;return new Date(e.d+"T00:00").getDay()===day.getDay()}
+function schedView(){
+var days=[];for(var i=0;i<7;i++){var d=new Date();d.setDate(d.getDate()+i);days.push(d)}
+var h="";days.forEach(function(d,i){
+var list=S.ev.filter(function(e){return occurs(e,d)}).sort(function(a,b){return a.tm<b.tm?-1:1});
+var name=i===0?"Today":i===1?"Tomorrow":d.toLocaleDateString([], {weekday:"long"});
+h+='<h2>'+name+' · '+d.toLocaleDateString([], {day:"numeric",month:"short"})+'</h2>'+(list.length?list.map(function(e){return '<div class="item"><div class="grow"><b>'+esc(e.t)+'</b><div class="pre">'+e.tm+(e.rep!=="once"?' · repeats '+e.rep:'')+(e.pre?' · alert '+e.pre+' min before':'')+'</div></div><button class="x" data-d="'+e.id+'" aria-label="Delete event">Delete</button></div>'}).join(""):'<p class="empty" style="padding:4px">Free</p>')});
+$("app").innerHTML='<h1>Schedule</h1><p class="sub">Classes, meetings and appointments for the next 7 days.</p><input id="et" placeholder="e.g. Site meeting with Mr John" style="margin-bottom:8px"><div class="row" style="margin-bottom:8px"><input type="date" id="ed" value="'+ds(new Date())+'"><input type="time" id="em" value="09:00"></div><div class="row" style="margin-bottom:8px"><select id="er"><option value="once">Once</option><option value="daily">Every day</option><option value="weekly">Every week</option></select><select id="ep"><option value="0">At the time</option><option value="10">10 min before</option><option value="30">30 min before</option></select></div><button class="btn" id="ea">Add to schedule</button>'+h;
+$("ea").onclick=function(){var t=$("et").value.trim();if(!t||!$("ed").value||!$("em").value){alert("Enter a title, date and time.");return}
+S.ev.push({id:uid(),t:t,d:$("ed").value,tm:$("em").value,rep:$("er").value,pre:+$("ep").value,f:{}});save();
+if(window.Notification&&Notification.permission==="default"){try{Notification.requestPermission()}catch(e){}}schedView()};
+$("app").onclick=function(e){var d=e.target.getAttribute("data-d");if(d){S.ev=S.ev.filter(function(x){return x.id!==d});save();schedView()}};
+}
+function checkEv(){
+var now=Date.now(),day=new Date();
+for(var i=0;i<S.ev.length;i++){var e=S.ev[i];if(!occurs(e,day))continue;
+var key=ds(day),at=new Date(key+"T"+e.tm).getTime()-e.pre*60000;
+if(now>=at&&now<at+600000&&!(e.f&&e.f[key])){e.f=e.f||{};e.f[key]=1;save();
+var msg=e.t+" at "+e.tm;
+if(window.Notification&&Notification.permission==="granted"){try{new Notification("Coming up",{body:msg})}catch(x){}}
+if(navigator.vibrate){try{navigator.vibrate([200,100,200])}catch(x){}}
+var b=$("banner");b.style.display="block";b.innerHTML='<b>'+esc(msg)+'</b><div class="row"><button data-x="1">Dismiss</button></div>';return}}}
+setInterval(checkEv,15000);checkEv();
+
+/* SEARCH */
+function searchView(){
+$("app").innerHTML='<h1>Search</h1><p class="sub">Notes, tasks, reminders and schedule in one place.</p><input id="qi" type="search" placeholder="Try: cement" value="'+esc(q)+'"><div id="res"></div>';
+function run(){q=$("qi").value;var k=q.trim().toLowerCase(),h="";
+if(!k){$("res").innerHTML='<p class="empty">Type a word to search everything you have saved.</p>';return}
+var n=S.notes.filter(function(x){return (x.t+" "+x.b).toLowerCase().indexOf(k)>-1}),
+t=S.tasks.filter(function(x){return x.t.toLowerCase().indexOf(k)>-1}),
+r=S.rem.filter(function(x){return x.t.toLowerCase().indexOf(k)>-1}),v=S.ev.filter(function(x){return x.t.toLowerCase().indexOf(k)>-1});
+if(n.length)h+='<h2>Notes ('+n.length+')</h2>'+n.map(noteCard).join("");
+if(t.length)h+='<h2>Tasks ('+t.length+')</h2>'+t.map(function(x){return '<div class="item'+(x.done?' done':'')+'"><div class="grow">'+esc(x.t)+'</div></div>'}).join("");
+if(r.length)h+='<h2>Reminders ('+r.length+')</h2>'+r.map(function(x){return '<div class="item'+(x.done?' done':'')+'"><div class="grow"><b>'+esc(x.t)+'</b><div class="pre">'+fmt(x.at)+'</div></div></div>'}).join("");
+if(v.length)h+='<h2>Schedule ('+v.length+')</h2>'+v.map(function(x){return '<div class="item"><div class="grow"><b>'+esc(x.t)+'</b><div class="pre">'+x.d+" "+x.tm+'</div></div></div>'}).join("");
+$("res").innerHTML=h||'<p class="empty">Nothing found for “'+esc(q)+'”.</p>'}
+$("qi").oninput=run;run();
+$("app").onclick=function(e){var c=e.target.closest("[data-open]");if(c){tab="notes";openId=c.getAttribute("data-open");render()}};
+}
+render();sync();
+})();
+</script>
+</body>
+</html>
