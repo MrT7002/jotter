@@ -114,7 +114,6 @@ nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
 nav button.on{color:var(--acc);background:var(--glow)}nav button.on svg{animation:pop .4s}
 #banner{position:fixed;left:12px;right:12px;top:calc(env(safe-area-inset-top,0px) + 8px);max-width:616px;margin:0 auto;background:var(--acc);color:var(--accink);border-radius:16px;padding:12px 14px;display:none;z-index:40;animation:drop .3s both;box-shadow:0 8px 30px rgba(0,0,0,.3)}
 #banner .row{margin-top:8px}#banner button{background:var(--accink);color:var(--acc);border:0;border-radius:12px;padding:8px 14px;font-weight:700}
-#lock{position:fixed;inset:0;background:var(--bg);z-index:30;display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;gap:12px}
 #splash{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;align-items:center;justify-content:center;transition:opacity .5s,visibility .5s}
 #splash.out{opacity:0;visibility:hidden}
 .sl{text-align:center}.sg{display:inline-grid;place-items:center;width:84px;height:84px;border-radius:26px;background:var(--card2);color:var(--acc);animation:pop .9s both,ring 2s infinite}.sg svg{width:46px;height:46px}
@@ -122,6 +121,33 @@ nav button.on{color:var(--acc);background:var(--glow)}nav button.on svg{animatio
 .ld{width:120px;height:4px;border-radius:9px;background:var(--line);margin:22px auto 0;overflow:hidden}.ld i{display:block;height:100%;background:var(--acc);animation:load 1.2s ease-in-out both}
 .cf{position:fixed;width:8px;height:8px;border-radius:2px;pointer-events:none;z-index:60;animation:cf .8s ease-out forwards}
 .toast{position:fixed;left:50%;bottom:100px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:99px;z-index:60;font-weight:600;animation:rise .3s both}
+#lock{position:fixed;inset:0;background:#000;color:#fff;z-index:30;display:none}
+.ls{height:100%;max-width:440px;margin:0 auto;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top,0px) + 14px) 24px calc(env(safe-area-inset-bottom,0px) + 18px);position:relative;overflow:hidden}
+.lt{display:flex;justify-content:space-between;align-items:center;min-height:44px}
+.lbk{background:none;border:0;color:#fff;padding:6px 8px 6px 0}.lbk svg{width:26px;height:26px}
+.lhelp{background:none;border:0;color:#8e8e93;font-size:.9rem;padding:8px 0}
+.lbody{margin-top:5vh;transition:filter .45s,opacity .45s}.lbody.blur{filter:blur(14px);opacity:.45}
+.lill{display:block;width:150px;margin:0 auto 18px}.lill .bub2{transform-origin:62px 40px;animation:pop .5s both}
+.ltitle{font-size:2rem;font-weight:800;margin:0 0 6px;color:#fff;letter-spacing:-.02em}
+.lsub{color:#8e8e93;font-size:.9rem;margin:0 0 22px}.lsub b{color:#fff}
+.boxes{display:flex;gap:10px}
+.bx{flex:1;max-width:58px;aspect-ratio:1/1.1;border-radius:14px;background:#1c1c1e;border:1.5px solid transparent;display:grid;place-items:center;font-size:1.9rem;font-weight:700;color:#fff;transition:border-color .2s,background .2s}
+.bx.f{animation:pop .25s}.bx.act{border-color:#E0A800}
+.bx.er{border-color:#E5484D;background:#1d0b0d}
+.cur{width:2px;height:26px;background:#E0A800;animation:blink 1s steps(2,start) infinite}
+.shake{animation:shake .45s}
+.lerr{color:#E5484D;font-size:.85rem;margin-top:12px;min-height:1.3em;display:flex;gap:6px;align-items:center}.lerr svg{width:16px;height:16px}
+.lbio{margin-top:28px;background:#1c1c1e;border:0;color:#fff;border-radius:14px;padding:12px 16px;display:inline-flex;gap:8px;align-items:center}
+.lpi{position:absolute;left:0;top:0;width:1px;height:1px;opacity:0;border:0;padding:0}
+.lover{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;font-weight:600}.lover.on{display:flex;animation:rise .3s both}
+.dots{display:flex;gap:10px;height:30px;align-items:center}.dots i{width:12px;height:12px;border-radius:50%;animation:hop .9s ease-in-out infinite}
+.dots i:nth-child(1){background:#EA4335}.dots i:nth-child(2){background:#4285F4;animation-delay:.1s}.dots i:nth-child(3){background:#34A853;animation-delay:.2s}.dots i:nth-child(4){background:#FBBC05;animation-delay:.3s}.dots i:nth-child(5){background:#FF8A3D;animation-delay:.4s}
+.vb{width:88px;height:88px;border-radius:50%;background:#FFB400;display:grid;place-items:center;animation:pop .5s both;transition:background .4s}
+.vb svg{width:40px;height:40px;stroke:#111;stroke-width:2.4;animation:spinin .7s both}.vb.ok{background:#34C759}.vb.ok svg{stroke:#fff}
+@keyframes blink{50%{opacity:0}}
+@keyframes shake{20%{transform:translateX(-9px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(4px)}}
+@keyframes hop{0%,100%{transform:translateY(7px)}50%{transform:translateY(-9px)}}
+@keyframes spinin{from{transform:rotate(-120deg) scale(.5);opacity:0}to{transform:none;opacity:1}}
 @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 @keyframes pop{0%{transform:scale(.6)}60%{transform:scale(1.18)}100%{transform:scale(1)}}
 @keyframes ring{0%{box-shadow:0 0 0 0 var(--acc)}70%{box-shadow:0 0 0 12px rgba(0,0,0,0)}100%{box-shadow:0 0 0 0 rgba(0,0,0,0)}}
@@ -137,14 +163,14 @@ nav button.on{color:var(--acc);background:var(--glow)}nav button.on svg{animatio
 <body>
 <div id="splash"></div>
 <div id="banner" role="alert"></div>
-<div id="lock"><h1>Universal AI Notebook is locked</h1><input id="lp" type="password" inputmode="numeric" maxlength="8" placeholder="Enter PIN" style="max-width:260px;text-align:center"><button class="btn" id="lu">Unlock</button><button class="ghost" id="lb" style="display:none">Use fingerprint</button><div id="lm" class="late"></div></div>
+<div id="lock"></div>
 <div id="app"></div>
 <nav><div id="tabs"></div></nav>
 <script>
 (function(){
-var KEY="jotter-v1",tab="home",openId=null,q="",S={notes:[],tasks:[],rem:[],ev:[],al:[],rec:[],cur:"all",set:{theme:"dark",sys:false,acc:"",fs:"m",bg:"modern",name:""}};
-try{var raw=localStorage.getItem(KEY);if(raw)S=Object.assign(S,JSON.parse(raw))}catch(e){}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}sync()}
+var SKEY="jotter-v1",tab="home",openId=null,q="",S={notes:[],tasks:[],rem:[],ev:[],al:[],rec:[],cur:"all",set:{theme:"dark",sys:false,acc:"",fs:"m",bg:"modern",name:""}};
+try{var raw=localStorage.getItem(SKEY);if(raw)S=Object.assign(S,JSON.parse(raw))}catch(e){}
+function save(){try{localStorage.setItem(SKEY,JSON.stringify(S))}catch(e){}sync()}
 var SN=["beep","chime","pulse"],LN=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.LocalNotifications,syncT;
 function sync(){if(!LN)return;clearTimeout(syncT);syncT=setTimeout(doSync,400)}
 async function doSync(){try{
@@ -475,23 +501,51 @@ function ub64(t){var b=atob(t),u=new Uint8Array(b.length),i;for(i=0;i<b.length;i
 function deriveKey(pin,salt){return crypto.subtle.importKey("raw",new TextEncoder().encode(pin),"PBKDF2",false,["deriveKey"]).then(function(m){return crypto.subtle.deriveKey({name:"PBKDF2",salt:ub64(salt),iterations:150000,hash:"SHA-256"},m,{name:"AES-GCM",length:256},false,["encrypt","decrypt"])})}
 function enc(o){var iv=crypto.getRandomValues(new Uint8Array(12));return crypto.subtle.encrypt({name:"AES-GCM",iv:iv},KEY,new TextEncoder().encode(JSON.stringify(o))).then(function(c){return{iv:b64(iv),ct:b64(c)}})}
 function dec(e){return crypto.subtle.decrypt({name:"AES-GCM",iv:ub64(e.iv)},KEY,ub64(e.ct)).then(function(x){return JSON.parse(new TextDecoder().decode(x))})}
-function showLock(){$("lock").style.display="flex";$("lp").value="";$("lm").textContent="";$("lb").style.display=S.bio?"block":"none";if(S.bio)setTimeout(bioUnlock,300)}
-function bioUnlock(){var NB=P("NativeBiometric");if(!NB||!S.bio||$("lock").style.display==="none")return;NB.verifyIdentity({reason:"Unlock Jotter",title:"Unlock Jotter"}).then(function(){return NB.getCredentials({server:"com.jotter.app"})}).then(function(c){tryUnlock(c.password)}).catch(function(){})}
-function tryUnlock(pin){if(typeof pin!=="string")pin=$("lp").value;if(!pin)return;deriveKey(pin,S.pin.s).then(function(k){var o=KEY;KEY=k;return dec(S.pin.v).then(function(){$("lock").style.display="none";render()},function(){KEY=o;$("lm").textContent="Wrong PIN. Try again.";$("lp").value=""})})}
+IC.alert='<circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/>';IC.file=IC.note;IC.calendar=IC.cal;
+var LS={},ILL='<svg class="lill" viewBox="0 0 150 130" aria-hidden="true"><circle cx="66" cy="78" r="50" fill="#FFE680"/><rect x="44" y="22" width="44" height="82" rx="8" fill="#fff"/><rect x="58" y="94" width="16" height="3" rx="1.5" fill="#222"/><g class="bub2"><rect x="64" y="24" width="68" height="30" rx="7" fill="#9CC8FF" stroke="#fff" stroke-width="2"/><text id="lstar" x="98" y="46" text-anchor="middle" font-size="20" font-weight="800" fill="#1d4f9c" letter-spacing="2">* * *</text></g></svg>';
+function checkPin(pin){return deriveKey(pin,S.pin.s).then(function(k){return crypto.subtle.decrypt({name:"AES-GCM",iv:ub64(S.pin.v.iv)},k,ub64(S.pin.v.ct)).then(function(){KEY=k;return true},function(){return false})})}
+function lockScreen(c){
+var L=$("lock"),pin="",st="in",busy=false,i,bx="";
+L.style.display="block";for(i=0;i<6;i++)bx+='<div class="bx"></div>';
+L.innerHTML='<div class="ls"><div class="lt"><button class="lbk" id="lbk" aria-label="Back" style="visibility:'+(c.back?"visible":"hidden")+'">'+ic("back")+'</button>'+(c.help?'<button class="lhelp" id="lhp">'+c.help+'</button>':'<span></span>')+'</div><div class="lbody" id="lbody">'+ILL+'<h1 class="ltitle">'+c.title+'</h1><p class="lsub">'+c.sub+'</p><div class="boxes" id="bxs">'+bx+'</div><div class="lerr" id="lerr"></div>'+(c.bio?'<button class="lbio" id="lb">'+ic("user")+' Use fingerprint</button>':'')+'</div><input id="lpi" class="lpi" type="tel" inputmode="numeric" autocomplete="off" maxlength="6" aria-label="PIN"><div class="lover" id="lover"></div></div>';
+var inp=$("lpi");
+function draw(){var bs=$("bxs").children,k,b,a;for(k=0;k<6;k++){b=bs[k];a=st==="in"&&!busy&&k===pin.length;b.className="bx"+(k<pin.length?" f":"")+(a?" act":"")+(st==="err"?" er":"");b.innerHTML=k<pin.length?"•":(a?'<s class="cur"></s>':"")}
+var t=$("lstar");if(t)t.textContent=pin.split("").map(function(){return"*"}).join(" ")}
+function verified(cb){var o=$("lover");$("lbody").classList.add("blur");o.className="lover on";o.innerHTML='<div class="vb" id="vb">'+ic("lock")+'</div><span>Verified</span>';
+setTimeout(function(){var v=$("vb");if(v){v.classList.add("ok");v.innerHTML='<svg class="i" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg>'}},650);setTimeout(cb,1250)}
+function fail(msg){busy=false;st="err";pin="";inp.value="";$("lover").className="lover";$("lbody").classList.remove("blur");$("lerr").innerHTML=ic("alert")+msg;var b=$("bxs");b.classList.remove("shake");void b.offsetWidth;b.classList.add("shake");try{navigator.vibrate([60,40,60])}catch(e){}draw();inp.focus()}
+function submit(){busy=true;inp.blur();
+if(c.quick){var p=pin;busy=false;if(c.done)c.done(p);return}
+$("lbody").classList.add("blur");$("lover").className="lover on";$("lover").innerHTML='<div class="dots"><i></i><i></i><i></i><i></i><i></i></div><span>Verifying…</span>';
+var done=pin;Promise.all([c.check(done),new Promise(function(r){setTimeout(r,800)})]).then(function(r){
+if(r[0])verified(function(){L.style.display="none";L.innerHTML="";if(c.done)c.done(done)});else fail(c.err||"Wrong PIN. Try again.")}).catch(function(){fail("Something went wrong. Try again.")})}
+inp.oninput=function(){if(busy)return;var v=inp.value.replace(/\D/g,"").slice(0,6),prev=pin.length;inp.value=v;if(st==="err"){st="in";$("lerr").innerHTML=""}pin=v;draw();if(pin.length===6&&prev<6)submit()};
+$("bxs").onclick=function(){inp.focus()};
+$("lbk").onclick=function(){if(!c.back)return;L.style.display="none";L.innerHTML="";if(c.onBack)c.onBack()};
+var h=$("lhp");if(h)h.onclick=c.helpFn;
+var lb=$("lb");if(lb)lb.onclick=bioUnlock;
+LS.verified=verified;draw();setTimeout(function(){inp.focus()},250)}
+function showLock(){lockScreen({title:"Welcome back",sub:'Enter your 6-digit PIN to open <b>Universal AI Notebook</b>.',help:"Forgot PIN?",helpFn:function(){alert("Your PIN cannot be recovered because private notes are encrypted with it.\n\nTo start over, clear this app's storage in Android Settings, under Apps, Universal AI Notebook, Storage. That erases all notes.")},bio:!!S.bio,check:checkPin,done:function(){render()}});if(S.bio)setTimeout(bioUnlock,600)}
+function bioUnlock(){var NB=P("NativeBiometric");if(!NB||!S.bio||$("lock").style.display==="none"||!$("lb"))return;NB.verifyIdentity({reason:"Unlock Universal AI Notebook",title:"Unlock"}).then(function(){return NB.getCredentials({server:"com.jotter.app"})}).then(function(c){tryUnlock(c.password)}).catch(function(){})}
+function tryUnlock(pin){checkPin(pin).then(function(ok){if(ok&&LS.verified)LS.verified(function(){var L=$("lock");L.style.display="none";L.innerHTML="";render()})})}
 function setPin(v){var salt=b64(crypto.getRandomValues(new Uint8Array(16))),priv=S.notes.filter(function(n){return n.pv});
 return Promise.all(priv.map(function(n){return dec(n.enc)})).then(function(pl){
 var jobs=[].concat.apply([],pl.map(function(p){return (p.a||[]).map(function(a){return fget(a.id).then(function(x){return{a:a,x:x}})})}));
 return Promise.all(jobs).then(function(files){return deriveKey(v,salt).then(function(k){KEY=k;
 return Promise.all(files.map(function(f){return fputE(f.a.id,f.x.blob,f.a.name,f.a.type)})).then(function(){return Promise.all(pl.map(function(p){return enc(p)}))}).then(function(es){priv.forEach(function(n,i){n.enc=es[i]});return enc({ok:1})}).then(function(vv){S.pin={s:salt,v:vv};save()})})})})}
-function secHtml(){return '<h2>Security</h2><div class="item" style="flex-direction:column;gap:8px"><div class="pre">'+(S.pin?'App lock is on. Private notes are encrypted with your PIN.':'Set a PIN to lock the app and encrypt private notes.')+'</div><input id="pn" type="password" inputmode="numeric" maxlength="8" placeholder="'+(S.pin?'New PIN':'PIN')+' (4 to 8 digits)"><div class="row"><button class="btn" id="ps">'+(S.pin?'Change PIN':'Set PIN')+'</button>'+(S.pin?'<button class="ghost" id="pr">Remove PIN</button>':'')+'</div>'+(S.pin?'<button class="ghost" id="bo">'+(S.bio?'Turn off fingerprint':'Turn on fingerprint')+'</button><div class="hint">To turn fingerprint on, type your current PIN in the box first.</div>':'')+'<div class="hint"><div class="hint">If you forget your PIN, private notes cannot be recovered.</div></div>'}
-function bindSec(){var ps=$("ps");if(!ps)return;
-ps.onclick=function(){var v=$("pn").value;if(!/^\d{4,8}$/.test(v)){alert("Use 4 to 8 digits.");return}setPin(v).then(function(){var NB=P("NativeBiometric");if(S.bio&&NB)return NB.setCredentials({username:"jotter",password:v,server:"com.jotter.app"})}).then(function(){alert("PIN saved.");homeView()}).catch(function(){alert("Could not save the PIN.")})};
-var pr=$("pr");if(pr)pr.onclick=function(){if(!confirm("Remove the PIN? Private notes become normal notes."))return;
-Promise.all(S.notes.filter(function(n){return n.pv}).map(function(n){return dec(n.enc).then(function(p){return Promise.all((p.a||[]).map(function(a){return fget(a.id).then(function(x){return fput(a.id,{blob:x.blob,name:a.name,type:a.type})})})).then(function(){n.t=p.t;n.b=p.b;n.a=p.a||[];delete n.enc;n.pv=false})})})).then(function(){S.pin=null;KEY=null;if(S.bio&&P("NativeBiometric")){try{P("NativeBiometric").deleteCredentials({server:"com.jotter.app"})}catch(e){}}S.bio=false;save();homeView()})};
-var bo=$("bo");if(bo)bo.onclick=function(){var NB=P("NativeBiometric");if(!NB){alert("Fingerprint is only available in the installed app.");return}
-if(S.bio){NB.deleteCredentials({server:"com.jotter.app"}).catch(function(){});S.bio=false;save();homeView();return}
-var v=$("pn").value;if(!v){alert("Type your current PIN in the box first.");return}
-deriveKey(v,S.pin.s).then(function(k){var o=KEY;KEY=k;return dec(S.pin.v).catch(function(e){KEY=o;throw e})}).then(function(){return NB.isAvailable()}).then(function(r){if(!r.isAvailable)throw 0;return NB.verifyIdentity({reason:"Turn on fingerprint unlock",title:"Jotter"})}).then(function(){return NB.setCredentials({username:"jotter",password:v,server:"com.jotter.app"})}).then(function(){S.bio=true;save();alert("Fingerprint unlock is on.");homeView()}).catch(function(){alert("Could not turn on fingerprint. Check your PIN and that a fingerprint is set up on this phone.")})}}
+function secHtml(){return '<h2>Security</h2><div class="item" style="flex-direction:column;align-items:stretch;gap:10px"><div class="row"><span class="ico g6">'+ic("lock")+'</span><div class="grow"><b>'+(S.pin?'App lock is on':'App lock is off')+'</b><span class="pre">'+(S.pin?'Private notes are encrypted with your PIN.':'Set a 6-digit PIN to lock the app and encrypt private notes.')+'</span></div></div><div class="row"><button class="btn" id="ps">'+(S.pin?'Change PIN':'Set PIN')+'</button>'+(S.pin?'<button class="ghost" id="pr">Remove PIN</button>':'')+'</div>'+(S.pin?'<button class="ghost" id="bo">'+ic("user")+' '+(S.bio?'Turn off fingerprint':'Turn on fingerprint')+'</button>':'')+'<div class="hint">If you forget your PIN, private notes cannot be recovered.</div></div>'}
+function pinFlow(){var first="";
+function step1(){lockScreen({title:S.pin?"New PIN":"Create your PIN",sub:"Choose a 6-digit PIN to lock the app and encrypt private notes.",back:true,quick:true,done:function(p){first=p;step2()}})}
+function step2(){lockScreen({title:"Confirmation",sub:"Enter the 6-digit PIN again to confirm.",back:true,onBack:step1,err:"PINs do not match. Try again.",
+check:function(p){if(p!==first)return Promise.resolve(false);return setPin(p).then(function(){var NB=P("NativeBiometric");if(S.bio&&NB)return NB.setCredentials({username:"jotter",password:p,server:"com.jotter.app"})}).then(function(){return true})},
+done:function(){toast("PIN saved");if(tab==="more"&&moreSub==="set")setView()}})}
+step1()}
+function doRemove(){return Promise.all(S.notes.filter(function(n){return n.pv}).map(function(n){return dec(n.enc).then(function(p){return Promise.all((p.a||[]).map(function(a){return fget(a.id).then(function(x){return fput(a.id,{blob:x.blob,name:a.name,type:a.type})})})).then(function(){n.t=p.t;n.b=p.b;n.a=p.a||[];delete n.enc;n.pv=false})})})).then(function(){S.pin=null;KEY=null;if(S.bio&&P("NativeBiometric")){try{P("NativeBiometric").deleteCredentials({server:"com.jotter.app"})}catch(e){}}S.bio=false;save();toast("PIN removed");if(tab==="more"&&moreSub==="set")setView()})}
+function removeFlow(){lockScreen({title:"Remove PIN",sub:"Enter your PIN. Private notes will become normal notes.",back:true,check:checkPin,done:function(){doRemove()}})}
+function bioFlow(){var NB=P("NativeBiometric");if(!NB){alert("Fingerprint is only available in the installed app.");return}
+if(S.bio){NB.deleteCredentials({server:"com.jotter.app"}).catch(function(){});S.bio=false;save();setView();return}
+lockScreen({title:"Confirm it is you",sub:"Enter your PIN to turn on fingerprint unlock.",back:true,check:checkPin,done:function(pin){NB.isAvailable().then(function(r){if(!r.isAvailable)throw 0;return NB.verifyIdentity({reason:"Turn on fingerprint unlock",title:"Universal AI Notebook"})}).then(function(){return NB.setCredentials({username:"jotter",password:pin,server:"com.jotter.app"})}).then(function(){S.bio=true;save();toast("Fingerprint unlock is on");setView()}).catch(function(){alert("Could not turn on fingerprint. Check that a fingerprint is set up on this phone.")})}})}
+function bindSec(){var a=$("ps");if(!a)return;a.onclick=pinFlow;var r=$("pr");if(r)r.onclick=removeFlow;var b=$("bo");if(b)b.onclick=bioFlow}
 
 /* FILES (IndexedDB) */
 var DBP=null;
@@ -564,24 +618,278 @@ if(!n.pv){if(!S.pin||!KEY){alert("Set a PIN first on the Home tab, under Securit
 Promise.all((cur.a||[]).map(function(a){return fget(a.id).then(function(v){return fputE(a.id,v.blob,a.name,a.type)})})).then(function(){return enc({t:cur.t,b:cur.b,a:cur.a||[]})}).then(function(e){n.enc=e;n.t="";n.b="";n.a=[];n.pv=true;save();render()})}
 else{Promise.all((cur.a||[]).map(function(a){return fget(a.id).then(function(v){return fput(a.id,{blob:v.blob,name:a.name,type:a.type})})})).then(function(){n.t=cur.t;n.b=cur.b;n.a=cur.a||[];delete n.enc;n.pv=false;save();render()})}}}
 
-/* SEARCH */
+/* UNIVERSAL SEARCH — PHASE 1 */
 function searchView(){
-$("app").innerHTML=hdr("Search",{back:1,noS:1})+'<input id="qi" type="search" placeholder="Search notes, tasks, reminders…" value="'+esc(q)+'"><div id="res"></div>';
-function run(){q=$("qi").value;var k=q.trim().toLowerCase(),h="";
-if(!k){$("res").innerHTML='<p class="empty">Type a word to search everything you have saved.</p>';return}
-var n=S.notes.filter(function(x){return (x.t+" "+x.b).toLowerCase().indexOf(k)>-1}),
-t=S.tasks.filter(function(x){return x.t.toLowerCase().indexOf(k)>-1}),
-r=S.rem.filter(function(x){return x.t.toLowerCase().indexOf(k)>-1}),v=S.ev.filter(function(x){return x.t.toLowerCase().indexOf(k)>-1});
-if(n.length)h+='<h2>Notes ('+n.length+')</h2>'+n.map(noteCard).join("");
-if(t.length)h+='<h2>Tasks ('+t.length+')</h2>'+t.map(function(x){return '<div class="item'+(x.done?' done':'')+'"><div class="grow">'+esc(x.t)+'</div></div>'}).join("");
-if(r.length)h+='<h2>Reminders ('+r.length+')</h2>'+r.map(function(x){return '<div class="item'+(x.done?' done':'')+'"><div class="grow"><b>'+esc(x.t)+'</b><div class="pre">'+fmt(x.at)+'</div></div></div>'}).join("");
-if(v.length)h+='<h2>Schedule ('+v.length+')</h2>'+v.map(function(x){return '<div class="item"><div class="grow"><b>'+esc(x.t)+'</b><div class="pre">'+x.d+" "+x.tm+'</div></div></div>'}).join("");
-$("res").innerHTML=h||'<p class="empty">Nothing found for “'+esc(q)+'”.</p>'}
-$("qi").oninput=run;run();
-$("app").onclick=function(e){var c=e.target.closest("[data-open]");if(c){tab="notes";openId=c.getAttribute("data-open");render()}};
+  $("app").innerHTML=hdr("Search",{back:1,noS:1})+
+    '<div class="card" style="margin-top:0">'+
+      '<div class="row">'+
+        '<input id="qi" type="search" autocomplete="off" placeholder="Search anything…">'+
+        '<button class="ghost" id="qclear" aria-label="Clear search">✕</button>'+
+      '</div>'+
+      '<div class="chips wrap" id="qfilters">'+
+        '<button class="chip on" data-qk="all">All</button>'+
+        '<button class="chip" data-qk="notes">Notes</button>'+
+        '<button class="chip" data-qk="recordings">Recordings</button>'+
+        '<button class="chip" data-qk="tasks">Tasks</button>'+
+        '<button class="chip" data-qk="reminders">Reminders</button>'+
+        '<button class="chip" data-qk="schedule">Schedule</button>'+
+      '</div>'+
+      '<div class="hint">Search across everything saved in Universal AI Notebook.</div>'+
+    '</div>'+
+    '<div id="res"></div>';
+
+  var filter="all";
+
+  function norm(v){
+    return String(v||"").toLowerCase().replace(/\s+/g," ").trim();
+  }
+
+  function escQ(v){
+    return esc(String(v||""));
+  }
+
+  function termsFor(v){
+    return norm(v).split(" ").filter(function(x){return x.length>1});
+  }
+
+  function hayFor(item,type){
+    var h=[];
+
+    if(type==="notes"){
+      h.push(item.t,item.b);
+      (item.a||[]).forEach(function(a){
+        h.push(a.name,a.type);
+      });
+    }else if(type==="recordings"){
+      h.push(item.t,item.k);
+      /*
+       * Phase 2 will add item.transcript and item.summary here.
+       * Keeping the fields optional makes this search forward-compatible.
+       */
+      h.push(item.transcript,item.summary);
+    }else if(type==="tasks"){
+      h.push(item.t,item.w);
+    }else if(type==="reminders"){
+      h.push(item.t,item.w);
+    }else if(type==="schedule"){
+      h.push(item.t,item.d,item.tm,item.w);
+    }
+
+    return norm(h.join(" "));
+  }
+
+  function score(item,type,terms,raw){
+    var h=hayFor(item,type);
+    if(!h)return 0;
+
+    var s=0;
+    terms.forEach(function(t){
+      if(h.indexOf(t)>-1)s+=1;
+    });
+
+    /* Exact phrase gets a bonus. */
+    if(raw && h.indexOf(raw)>-1)s+=2;
+
+    /* Title matches are more useful than body matches. */
+    var title=norm(item.t);
+    terms.forEach(function(t){
+      if(title.indexOf(t)>-1)s+=2;
+    });
+
+    return s;
+  }
+
+  function preview(item,type){
+    if(type==="notes")return item.b||"Note";
+    if(type==="recordings"){
+      return item.summary||item.transcript||"Audio recording";
+    }
+    if(type==="tasks")return item.done?"Completed task":"Task";
+    if(type==="reminders")return item.done?"Completed reminder":"Reminder";
+    if(type==="schedule")return (item.d||"")+" "+(item.tm||"");
+    return "";
+  }
+
+  function when(item,type){
+    if(type==="notes")return item.ts?fmt(item.ts):"";
+    if(type==="recordings")return item.at?fmt(item.at):"";
+    if(type==="reminders")return item.at?fmt(item.at):"";
+    if(type==="schedule")return (item.d||"")+" "+(item.tm||"");
+    return "";
+  }
+
+  function iconFor(type){
+    if(type==="notes")return ic("file");
+    if(type==="recordings")return ic("mic");
+    if(type==="tasks")return ic("check");
+    if(type==="reminders")return ic("bell");
+    if(type==="schedule")return ic("calendar");
+    return ic("search");
+  }
+
+  function clsFor(type){
+    return {
+      notes:"g1",
+      recordings:"g2",
+      tasks:"g3",
+      reminders:"g4",
+      schedule:"g5"
+    }[type]||"g1";
+  }
+
+  function resultCard(r){
+    var x=r.item;
+    var done=(r.type==="tasks"||r.type==="reminders")&&x.done;
+    return '<button class="item '+(done?'done ':'')+
+      '" style="width:100%;text-align:left;border:1px solid var(--line);color:var(--ink)" '+
+      'data-sopen="'+escQ(x.id||"")+'" data-stype="'+r.type+'">'+
+      '<span class="ico '+clsFor(r.type)+'">'+iconFor(r.type)+'</span>'+
+      '<span class="grow" style="min-width:0">'+
+        '<b>'+escQ(x.t||"Untitled")+'</b>'+
+        '<span class="meta">'+escQ(r.label)+' · '+escQ(when(x,r.type))+'</span>'+
+        '<span class="pre">'+escQ(preview(x,r.type))+'</span>'+
+      '</span>'+
+      '<span class="chev">›</span>'+
+    '</button>';
+  }
+
+  function collect(raw){
+    var terms=termsFor(raw),out=[];
+
+    if(!terms.length)return out;
+
+    var groups=[
+      ["notes",S.notes||[],"Notes"],
+      ["recordings",S.rec||[],"Recordings"],
+      ["tasks",S.tasks||[],"Tasks"],
+      ["reminders",S.rem||[],"Reminders"],
+      ["schedule",S.ev||[],"Schedule"]
+    ];
+
+    groups.forEach(function(g){
+      if(filter!=="all"&&filter!==g[0])return;
+
+      g[1].forEach(function(item){
+        /*
+         * Private notes stay excluded from search while locked.
+         * The existing app already uses KEY to unlock encrypted notes.
+         */
+        if(g[0]==="notes"&&item.pv)return;
+
+        var sc=score(item,g[0],terms,norm(raw));
+        if(sc>0){
+          out.push({
+            item:item,
+            type:g[0],
+            label:g[2],
+            score:sc
+          });
+        }
+      });
+    });
+
+    return out.sort(function(a,b){
+      if(b.score!==a.score)return b.score-a.score;
+
+      var at=a.item.ts||a.item.at||0;
+      var bt=b.item.ts||b.item.at||0;
+      return bt-at;
+    });
+  }
+
+  function run(){
+    var raw=$("qi").value.trim();
+    var box=$("res");
+
+    if(!raw){
+      box.innerHTML=
+        '<div class="card">'+
+          '<div class="hero" style="margin:0;cursor:default">'+
+            '<span class="ico g3">'+ic("search")+'</span>'+
+            '<div class="grow">'+
+              '<b>Search your notebook</b>'+
+              '<div class="pre">Notes, recordings, tasks, reminders and schedule.</div>'+
+            '</div>'+
+          '</div>'+
+          '<p class="hint">Try: cement, meeting, SIWES, report, client, tomorrow…</p>'+
+        '</div>';
+      return;
+    }
+
+    var results=collect(raw);
+
+    if(!results.length){
+      box.innerHTML=
+        '<div class="empty">'+
+          '<div style="font-size:2rem;margin-bottom:6px">⌕</div>'+
+          'Nothing found for “'+escQ(raw)+'”.'+
+          '<div class="hint">Try another word or switch the filter to All.</div>'+
+        '</div>';
+      return;
+    }
+
+    var counts={notes:0,recordings:0,tasks:0,reminders:0,schedule:0};
+    results.forEach(function(r){counts[r.type]++;});
+
+    var summary='<div class="hint" style="margin:14px 2px 8px">'+
+      results.length+' result'+(results.length===1?'':'s')+
+      ' found</div>';
+
+    box.innerHTML=summary+
+      results.map(resultCard).join("");
+  }
+
+  $("qi").oninput=run;
+
+  $("qclear").onclick=function(){
+    $("qi").value="";
+    $("qi").focus();
+    run();
+  };
+
+  $("qfilters").onclick=function(e){
+    var b=e.target.closest("[data-qk]");
+    if(!b)return;
+
+    filter=b.getAttribute("data-qk");
+
+    Array.prototype.forEach.call(
+      $("qfilters").querySelectorAll("[data-qk]"),
+      function(x){x.classList.toggle("on",x===b);}
+    );
+
+    run();
+  };
+
+  $("app").onclick=function(e){
+    var b=e.target.closest("[data-sopen]");
+    if(!b)return;
+
+    var id=b.getAttribute("data-sopen");
+    var type=b.getAttribute("data-stype");
+
+    /*
+     * Notes can open directly using the existing note editor.
+     * Other record types are currently informational results.
+     * Later phases can add direct navigation to each object.
+     */
+    if(type==="notes"){
+      tab="notes";
+      openId=id;
+      render();
+    }else if(type==="tasks"){tab="tasks";openId=null;moreSub=null;render();
+    }else if(type==="recordings"){tab="rec";openId=null;moreSub=null;render();
+    }else if(type==="reminders"){tab="more";moreSub="rem";render();
+    }else if(type==="schedule"){var ev=S.ev.filter(function(x){return x.id===id})[0];if(ev){calSel=ev.d;calM=new Date(ev.d+"T00:00");calM.setDate(1)}tab="more";moreSub="cal";render();
+    }
+  };
+
+  $("qi").focus();
+  run();
 }
+
 try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
-$("lu").onclick=tryUnlock;$("lb").onclick=bioUnlock;cleanCache();$("lp").onkeydown=function(e){if(e.key==="Enter")tryUnlock()};
+cleanCache();
 var hid=0;document.addEventListener("visibilitychange",function(){if(document.hidden){hid=Date.now()}else if(S.pin&&hid&&Date.now()-hid>20000){showLock()}});
 applyTheme();
 $("splash").innerHTML='<div class="sl"><span class="sg">'+ic("spark")+'</span><div class="sn">Universal AI Notebook</div><div class="stg">Capture · Think · Organize · Achieve</div><div class="ld"><i></i></div></div>';
