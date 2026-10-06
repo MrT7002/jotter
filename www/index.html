@@ -168,7 +168,7 @@ nav button.on{color:var(--acc);background:var(--glow)}nav button.on svg{animatio
 <nav><div id="tabs"></div></nav>
 <script>
 (function(){
-var SKEY="jotter-v1",tab="home",openId=null,q="",S={notes:[],tasks:[],rem:[],ev:[],al:[],rec:[],cur:"all",set:{theme:"dark",sys:false,acc:"",fs:"m",bg:"modern",name:""}};
+var SKEY="jotter-v1",tab="home",openId=null,q="",S={notes:[],tasks:[],rem:[],ev:[],al:[],rec:[],links:[],trash:[],cur:"all",set:{theme:"dark",sys:false,acc:"",fs:"m",bg:"modern",name:""}};
 try{var raw=localStorage.getItem(SKEY);if(raw)S=Object.assign(S,JSON.parse(raw))}catch(e){}
 function save(){try{localStorage.setItem(SKEY,JSON.stringify(S))}catch(e){}sync()}
 var SN=["beep","chime","pulse"],LN=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.LocalNotifications,syncT;
@@ -215,7 +215,7 @@ if(b.id==="hb"){moreSub=null;render()}else if(b.id==="hs"){tab="more";moreSub="s
 function render(){plusFn=null;drawTabs();var f;
 if(tab==="more")f=moreRoute;else if(tab==="notes")f=openId?editor:notesV;else f={home:homeView,rec:recV,tasks:tasksView}[tab];
 f();window.scrollTo(0,0)}
-function moreRoute(){var m={cal:calV,rem:remV,al:alarmV,ai:aiView,search:searchView,set:setView,theme:themeView};(m[moreSub]||moreView)()}
+function moreRoute(){var m={cal:calV,rem:remV,al:alarmV,ai:aiView,search:searchView,set:setView,theme:themeView,trash:trashView,bk:backupView};(m[moreSub]||moreView)()}
 
 /* NOTES */
 var nchip="all";
@@ -239,15 +239,15 @@ editor2(n,n)}
 function editor2(n,cur){if(n.pv&&!cur.a)cur.a=[];
 var SR=window.SpeechRecognition||window.webkitSpeechRecognition,NSR=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.SpeechRecognition;
 $("app").innerHTML='<div class="bar"><button class="ghost" id="back">Back</button><button class="ghost" id="pinb">'+(n.pin?"Unpin":"Pin")+'</button>'+((SR||NSR)?'<button class="ghost" id="mic">Speak</button>':'')+'<button class="ghost" id="del">Delete</button></div>'+
-'<input id="nt" placeholder="Title" value="'+esc(cur.t)+'" style="font-weight:600;margin-bottom:8px"><textarea id="nb" placeholder="Write or speak your note">'+esc(cur.b)+'</textarea><p class="hint" id="st">Saves automatically.</p><div class="bar" style="margin-top:12px"><button class="ghost" id="ph">Photo</button><button class="ghost" id="fl">File</button><button class="ghost" id="vn">Voice</button><button class="ghost" id="pv">'+(n.pv?'Make public':'Make private')+'</button></div><div id="att"></div>';
+'<input id="nt" placeholder="Title" value="'+esc(cur.t)+'" style="font-weight:600;margin-bottom:8px"><textarea id="nb" placeholder="Write or speak your note">'+esc(cur.b)+'</textarea><p class="hint" id="st">Saves automatically.</p><div class="bar" style="margin-top:12px"><button class="ghost" id="ph">Photo</button><button class="ghost" id="fl">File</button><button class="ghost" id="vn">Voice</button><button class="ghost" id="pv">'+(n.pv?'Make public':'Make private')+'</button></div><div id="att"></div><div id="lnk"></div>';
 var encT=null;
 function flush(){clearTimeout(encT);if(!n.pv)return Promise.resolve();return enc({t:cur.t,b:cur.b,a:cur.a||[]}).then(function(e){n.enc=e;save()})}
 function touch(){cur.t=$("nt").value;cur.b=$("nb").value;n.ts=Date.now();
 if(n.pv){clearTimeout(encT);$("st").textContent="Saving…";encT=setTimeout(function(){flush().then(function(){var t=$("st");if(t)t.textContent="Saved and encrypted."})},400)}else{save();$("st").textContent="Saved."}}
-$("nt").oninput=touch;$("nb").oninput=touch;bindAtt(n,cur,flush);
+$("nt").oninput=touch;$("nb").oninput=touch;bindAtt(n,cur,flush);bindLinks(n,cur,flush);
 $("back").onclick=function(){stopRec();(window.stopV?window.stopV():Promise.resolve()).then(flush).then(function(){openId=null;render()})};
 $("pinb").onclick=function(){n.pin=!n.pin;save();render()};
-$("del").onclick=function(){if(confirm("Delete this note?")){stopRec();(cur.a||[]).forEach(function(a){fdel(a.id)});S.notes=S.notes.filter(function(x){return x!==n});save();openId=null;render()}};
+$("del").onclick=function(){if(confirm("Move this note to Trash?")){stopRec();toTrash("note",n.id);openId=null;render()}};
 if(SR||NSR)$("mic").onclick=function(){
 if(NSR){NSR.requestPermissions().then(function(p){if(p.speechRecognition!=="granted"){$("st").textContent="Allow the microphone for Jotter in phone Settings, then try again.";return}
 return NSR.start({language:navigator.language||"en-US",maxResults:1,prompt:"Speak now",partialResults:false,popup:true}).then(function(r){var t=((r&&r.matches&&r.matches[0])||"").trim();if(t){$("nb").value+=($("nb").value&&!/\s$/.test($("nb").value)?" ":"")+t;touch()}})}).catch(function(){$("st").textContent="Voice input did not work. Try again."});return}
@@ -268,7 +268,7 @@ return t.split(/\s*(?:,|;|\n|\.\s|\band then\b|\band\b)\s*/i).map(function(s){re
 function dueFrom(t){var d=new Date();if(/\btomorrow\b/i.test(t)){d.setDate(d.getDate()+1);return ds(d)}if(/\b(today|tonight)\b/i.test(t))return ds(d);return ""}
 function fmtT(h){var a=h.split(":"),H=+a[0];return ((H%12)||12)+":"+a[1]+" "+(H<12?"AM":"PM")}
 function dueTxt(t){if(!t.due)return"No date";var tm=new Date();tm.setDate(tm.getDate()+1);var w=t.due===ds(new Date())?"Today":t.due===ds(tm)?"Tomorrow":new Date(t.due+"T00:00").toLocaleDateString([], {day:"numeric",month:"short"});return w+(t.tm?" · "+fmtT(t.tm):"")}
-function taskRow(t){var late=!t.done&&t.due&&t.due<ds(new Date());return '<div class="item'+(t.done?' done':'')+'"><input type="checkbox" class="chk" data-c="'+t.id+'"'+(t.done?' checked':'')+' aria-label="Mark done"><div class="grow"><b>'+esc(t.t)+'</b><span class="'+(late?'late':'pre')+'">'+dueTxt(t)+(late?' · overdue':'')+'</span></div><button class="x" data-d="'+t.id+'" aria-label="Delete task">'+ic("trash")+'</button></div>'}
+function taskRow(t){var late=!t.done&&t.due&&t.due<ds(new Date());return '<div class="item'+(t.done?' done':'')+'"><input type="checkbox" class="chk" data-c="'+t.id+'"'+(t.done?' checked':'')+' aria-label="Mark done"><div class="grow"><b>'+esc(t.t)+'</b><span class="'+(late?'late':'pre')+'">'+dueTxt(t)+(late?' · overdue':'')+'</span>'+lkBadge("t",t.id)+'</div><button class="x" data-d="'+t.id+'" aria-label="Delete task">'+ic("trash")+'</button></div>'}
 var tchip="all";
 function tasksView(){
 var td=ds(new Date()),all=S.tasks.filter(inWs),open=all.filter(function(t){return !t.done}),done=all.filter(function(t){return t.done}),list;
@@ -280,7 +280,7 @@ $("ta").onclick=add;$("ti").onkeydown=function(e){if(e.key==="Enter")add()};
 $("app").onclick=function(e){var k=e.target.getAttribute("data-tc"),c=e.target.getAttribute("data-c"),d=e.target.closest("[data-d]");
 if(k){tchip=k;tasksView();return}
 if(c){S.tasks.forEach(function(t){if(t.id===c){t.done=!t.done;if(t.done)burst(e.clientX,e.clientY)}});save();setTimeout(tasksView,450)}
-if(d){var id=d.getAttribute("data-d");S.tasks=S.tasks.filter(function(t){return t.id!==id});save();tasksView()}};
+if(d){var id=d.getAttribute("data-d");toTrash("task",id);tasksView()}};
 }
 
 /* REMINDERS */
@@ -297,7 +297,7 @@ if(window.Notification&&Notification.permission==="default"){try{Notification.re
 $("app").onclick=function(e){var rc=e.target.getAttribute("data-rc"),c=e.target.getAttribute("data-c"),d=e.target.closest("[data-d]");
 if(rc){rchip=rc;remView();return}
 if(c){complete(c,true);remView()}
-if(d){var id=d.getAttribute("data-d");S.rem=S.rem.filter(function(r){return r.id!==id});save();remView()}};
+if(d){var id=d.getAttribute("data-d");toTrash("rem",id);remView()}};
 }
 function complete(id,toggle){S.rem.forEach(function(r){if(r.id!==id)return;
 if(toggle&&r.done){r.done=false;r.fired=false;return}
@@ -327,7 +327,7 @@ for(i=0;i<first;i++)cells+='<span></span>';
 for(i=1;i<=dim;i++){var dt=new Date(y,m,i),k=ds(dt),has=S.ev.some(function(e){return occurs(e,dt)});cells+='<button class="d'+(k===today?' today':'')+(k===calSel?' sel':'')+'" data-day="'+k+'">'+i+(has?'<i></i>':'')+'</button>'}
 var sd=new Date(calSel+"T00:00"),evs=S.ev.filter(function(e){return occurs(e,sd)}).sort(function(a,b){return a.tm<b.tm?-1:1});
 $("app").innerHTML=hdr("Calendar",{back:1,plus:1})+'<div class="card"><div class="mh"><button class="ib" data-mv="-1" aria-label="Previous month">'+ic("back")+'</button><b>'+calM.toLocaleDateString([], {month:"long",year:"numeric"})+'</b><button class="ib" data-mv="1" aria-label="Next month">'+ic("chev")+'</button></div><div class="cg">'+wk+cells+'</div></div><h2>'+(calSel===today?"Today · ":"")+sd.toLocaleDateString([], {weekday:"short",month:"short",day:"numeric"})+'</h2>'+
-(evs.length?evs.map(function(e){return '<div class="item ev" style="--c:'+EVC[S.ev.indexOf(e)%6]+'"><div class="grow"><b>'+esc(e.t)+'</b><span class="pre">'+fmtT(e.tm)+(e.loc?' · '+esc(e.loc):'')+(e.rep!=="once"?' · repeats '+e.rep:'')+(e.pre?' · alert '+e.pre+' min before':'')+'</span></div><button class="x" data-d="'+e.id+'" aria-label="Delete event">'+ic("trash")+'</button></div>'}).join(""):'<p class="empty" style="padding:6px 0">Nothing planned. Add something below.</p>')+
+(evs.length?evs.map(function(e){return '<div class="item ev" style="--c:'+EVC[S.ev.indexOf(e)%6]+'"><div class="grow"><b>'+esc(e.t)+'</b><span class="pre">'+fmtT(e.tm)+(e.loc?' · '+esc(e.loc):'')+(e.rep!=="once"?' · repeats '+e.rep:'')+(e.pre?' · alert '+e.pre+' min before':'')+'</span>'+lkBadge("e",e.id)+'</div><button class="x" data-d="'+e.id+'" aria-label="Delete event">'+ic("trash")+'</button></div>'}).join(""):'<p class="empty" style="padding:6px 0">Nothing planned. Add something below.</p>')+
 '<h2>Add to calendar</h2><div class="card"><input id="et" placeholder="e.g. Civil Engineering Class" style="margin-bottom:8px"><input id="el" placeholder="Place (optional)" style="margin-bottom:8px"><div class="row" style="margin-bottom:8px"><input type="date" id="ed" value="'+calSel+'"><input type="time" id="em" value="09:00"></div><div class="row" style="margin-bottom:8px"><select id="er"><option value="once">Once</option><option value="daily">Every day</option><option value="weekly">Every week</option></select><select id="ep"><option value="0">At the time</option><option value="10">10 min before</option><option value="30">30 min before</option></select></div><button class="btn" id="ea">Add event</button></div>';
 plusFn=function(){var e=$("et");e.scrollIntoView({behavior:"smooth",block:"center"});e.focus()};
 $("ea").onclick=function(){var t=$("et").value.trim();if(!t||!$("ed").value||!$("em").value){alert("Enter a title, date and time.");return}
@@ -336,7 +336,7 @@ if(window.Notification&&Notification.permission==="default"){try{Notification.re
 $("app").onclick=function(e){var dd=e.target.closest("[data-day]"),mv=e.target.closest("[data-mv]"),d=e.target.closest("[data-d]");
 if(dd){calSel=dd.getAttribute("data-day");calV()}
 if(mv){calM.setMonth(calM.getMonth()+(+mv.getAttribute("data-mv")));calV()}
-if(d){var id=d.getAttribute("data-d");S.ev=S.ev.filter(function(x){return x.id!==id});save();calV()}};
+if(d){var id=d.getAttribute("data-d");toTrash("ev",id);calV()}};
 }
 function checkEv(){
 var now=Date.now(),day=new Date();
@@ -372,19 +372,19 @@ var T=[["New Note","note","g1","new"],["Record","mic","g2","rec"],["Upload File"
 $("app").innerHTML='<div class="hdr"><span class="logo">'+ic("spark")+'</span><h1 class="brand">Universal AI Notebook</h1><div class="grow"></div><button class="ib" id="hs" aria-label="Search">'+ic("search")+'</button><button class="av" data-go="prof" aria-label="Profile">'+esc((nm||"M").charAt(0).toUpperCase())+'</button></div>'+
 '<div class="greet"><span class="sun">'+em+'</span><div><b>'+g+(nm?", "+esc(nm):"")+'</b><span class="pre">Small steps make big progress.</span></div></div>'+
 '<div class="hero" data-go="tasks"><span class="ico g1">'+ic("check")+'</span><div class="grow"><span class="pre">Today\'s goal</span><b>'+(goal?esc(goal.t):"Add your first task")+'</b></div><span class="chev">'+ic("chev")+'</span></div>'+
-'<div class="qa">'+T.map(function(x){return '<div class="qt" data-go="'+x[3]+'"><span class="ico '+x[2]+'">'+ic(x[1])+'</span>'+x[0]+'</div>'}).join("")+'</div>'+
+homeToday()+'<div class="qa">'+T.map(function(x){return '<div class="qt" data-go="'+x[3]+'"><span class="ico '+x[2]+'">'+ic(x[1])+'</span>'+x[0]+'</div>'}).join("")+'</div>'+
 '<div class="card stats"><div class="ring" style="--p:'+pct+'"><span>'+pct+'%</span></div><div class="s"><b>'+open.length+'</b><span>tasks left</span></div><div class="s"><b>'+S.notes.filter(inWs).length+'</b><span>notes</span></div><div class="s"><b>'+evT+'</b><span>events today</span></div></div>'+
 '<h2>Recent activity</h2>'+(recent.length?recent.map(function(r){return '<div class="item" data-go="'+r.go+'"><span class="ico '+r.g+'">'+ic(r.i)+'</span><div class="grow"><b>'+esc(r.t)+'</b><span class="pre">'+r.s+' · '+ago(r.ts)+'</span></div></div>'}).join(""):'<p class="empty">Your recent notes, recordings and tasks show up here.</p>');
 $("app").onclick=function(e){var el=e.target.closest("[data-go]");if(!el)return;var g=el.getAttribute("data-go");
 if(g==="new")newNote();
 else if(g==="up"){newNote();setTimeout(function(){var f=$("fl");if(f)f.click()},350)}
-else if(g==="rec"||g==="tasks"){tab=g;openId=null;render()}
+else if(g==="tasks-today"){tchip="today";tab="tasks";openId=null;render()}else if(g==="rec"||g==="tasks"||g==="notes"){tab=g;openId=null;render()}
 else if(g==="cal"||g==="rem"){tab="more";moreSub=g;render()}
-else if(g==="prof"){tab="more";moreSub="set";render()}
+else if(g==="mv"){moveOverdue()}else if(g==="bk"){tab="more";moreSub="bk";render()}else if(g==="prof"){tab="more";moreSub="set";render()}
 else if(g.indexOf("n:")===0){tab="notes";openId=g.slice(2);render()}};
 }
 function moreView(){
-var R=[["cal","cal","g5","Calendar","Plan classes, meetings and events"],["rem","bell","g6","Reminders","Never miss anything"],["al","alarm","g4","Alarms","Wake up on time"],["ai","spark","g2","AI Assistant","Ask about your notes"],["scan","scan","g3","Scan a document","Turn a photo into text"],["search","search","g1","Search","Find anything fast"],["set","user","g2","Profile and settings","Security, stats and storage"],["theme","palette","g5","Theme settings","Colours, fonts and background"]];
+var R=[["cal","cal","g5","Calendar","Plan classes, meetings and events"],["rem","bell","g6","Reminders","Never miss anything"],["al","alarm","g4","Alarms","Wake up on time"],["ai","spark","g2","AI Assistant","Ask about your notes"],["scan","scan","g3","Scan a document","Turn a photo into text"],["search","search","g1","Search","Find anything fast"],["set","user","g2","Profile and settings","Security, stats and storage"],["theme","palette","g5","Theme settings","Colours, fonts and background"],["bk","cloud","g3","Backup and restore","Encrypted backup file"],["trash","trash","g6","Trash","Restore deleted items for 30 days"]];
 $("app").innerHTML=hdr("More",{noS:1})+R.map(function(r){return '<div class="item" data-m="'+r[0]+'"><span class="ico '+r[2]+'">'+ic(r[1])+'</span><div class="grow"><b>'+r[3]+'</b><span class="pre">'+r[4]+'</span></div><span class="chev">'+ic("chev")+'</span></div>'}).join("");
 $("app").onclick=function(e){var el=e.target.closest("[data-m]");if(!el)return;var m=el.getAttribute("data-m");if(m==="scan"){scan();return}moreSub=m;render()};
 }
@@ -577,7 +577,7 @@ m.onstop=function(){m.stream.getTracks().forEach(function(t){t.stop()});var b=ne
 var rkind="all",curKind="other";
 function notesView(){notesV()}
 function recView(){recV()}
-function recRow(r){var g={lecture:"g2",meeting:"g3",speech:"g4"}[r.k]||"g5";return '<div class="item col"><div class="row" style="width:100%"><span class="ico '+g+'">'+ic("mic")+'</span><div class="grow"><b>'+esc(r.t)+'</b><span class="pre">'+fmt(r.at)+' · '+mmss(r.dur)+'</span></div><button class="x" data-rn="'+r.id+'">Rename</button><button class="x" data-d="'+r.id+'" aria-label="Delete recording">'+ic("trash")+'</button></div><div id="pl-'+r.id+'"><button class="ghost" data-pl="'+r.id+'">'+ic("play")+' Play</button></div></div>'}
+function recRow(r){var g={lecture:"g2",meeting:"g3",speech:"g4"}[r.k]||"g5";return '<div class="item col"><div class="row" style="width:100%"><span class="ico '+g+'">'+ic("mic")+'</span><div class="grow"><b>'+esc(r.t)+'</b><span class="pre">'+fmt(r.at)+' · '+mmss(r.dur)+'</span>'+lkBadge("r",r.id)+'</div><button class="x" data-rn="'+r.id+'">Rename</button><button class="x" data-d="'+r.id+'" aria-label="Delete recording">'+ic("trash")+'</button></div><div id="pl-'+r.id+'"><button class="ghost" data-pl="'+r.id+'">'+ic("play")+' Play</button></div></div>'}
 function recV(){
 var list=S.rec.filter(function(r){return rkind==="all"||r.k===rkind}).sort(function(a,b){return b.at-a.at}),live;
 if(MR&&vnote)live='<div class="card"><p class="hint">A voice note is recording inside a note. Stop it there first.</p></div>';
@@ -591,7 +591,7 @@ var rs=$("rs");if(rs)rs.onclick=function(){recStop().then(function(o){if(!o)retu
 $("app").onclick=function(e){var t=e.target,k=t.getAttribute("data-rk"),pl=t.closest("[data-pl]"),d=t.closest("[data-d]"),rn=t.getAttribute("data-rn");
 if(k){rkind=k;recV();return}
 if(pl)playInto("pl-"+pl.getAttribute("data-pl"),pl.getAttribute("data-pl"));
-if(d){var id=d.getAttribute("data-d");if(confirm("Delete this recording?")){fdel(id);S.rec=S.rec.filter(function(r){return r.id!==id});save();recV()}}
+if(d){var id=d.getAttribute("data-d");if(confirm("Move this recording to Trash?")){toTrash("rec",id);recV()}}
 if(rn){var r=S.rec.filter(function(x){return x.id===rn})[0],v=prompt("Recording name",r.t);if(v&&v.trim()){r.t=v.trim();save();recV()}}};
 }
 
@@ -617,6 +617,98 @@ $("pv").onclick=function(){
 if(!n.pv){if(!S.pin||!KEY){alert("Set a PIN first on the Home tab, under Security.");return}
 Promise.all((cur.a||[]).map(function(a){return fget(a.id).then(function(v){return fputE(a.id,v.blob,a.name,a.type)})})).then(function(){return enc({t:cur.t,b:cur.b,a:cur.a||[]})}).then(function(e){n.enc=e;n.t="";n.b="";n.a=[];n.pv=true;save();render()})}
 else{Promise.all((cur.a||[]).map(function(a){return fget(a.id).then(function(v){return fput(a.id,{blob:v.blob,name:a.name,type:a.type})})})).then(function(){n.t=cur.t;n.b=cur.b;n.a=cur.a||[];delete n.enc;n.pv=false;save();render()})}}}
+
+/* CONNECTIONS */
+var STOP="the and for with that this from have has had are was were will would about into your you our not but all can out any more than then them they their what when where which while also need needs want make made call".split(" ");
+var TY={n:["Note","note","g3"],t:["Task","check","g4"],r:["Recording","mic","g2"],e:["Event","cal","g5"],m:["Reminder","bell","g6"]};
+function findItem(k){var t=k[0],id=k.slice(2),m={n:S.notes,t:S.tasks,r:S.rec,e:S.ev,m:S.rem}[t],it=(m||[]).filter(function(x){return x.id===id})[0];return it?{k:k,t:t,id:id,it:it}:null}
+function itemTitle(o){return o.t==="n"?(o.it.pv?"Private note":(o.it.t||"Untitled note")):(o.it.t||"Untitled")}
+function isLinked(a,b){return S.links.some(function(l){return (l.a===a&&l.b===b)||(l.a===b&&l.b===a)})}
+function linksOf(k){var out=[];S.links.forEach(function(l){var o=l.a===k?l.b:l.b===k?l.a:null;if(o){var f=findItem(o);if(f)out.push(f)}});return out}
+function addLink(a,b){if(a!==b&&!isLinked(a,b)){S.links.push({a:a,b:b});save()}}
+function unlink(a,b){S.links=S.links.filter(function(l){return !((l.a===a&&l.b===b)||(l.a===b&&l.b===a))});save()}
+function kw(x){var w=String(x||"").toLowerCase().match(/[a-z0-9]{4,}/g)||[];return w.filter(function(y,i,a){return STOP.indexOf(y)<0&&a.indexOf(y)===i})}
+function suggestFor(n,cur){var k="n:"+n.id,words=kw((cur.t||"")+" "+(cur.b||"")),out=[];if(!words.length)return out;
+[["t",S.tasks],["r",S.rec],["e",S.ev],["m",S.rem]].forEach(function(g){g[1].forEach(function(it){var key=g[0]+":"+it.id;if(isLinked(k,key))return;var hit=kw(it.t+" "+(it.loc||"")).filter(function(x){return words.indexOf(x)>-1});if(hit.length)out.push({k:key,hit:hit[0],n:hit.length})})});
+return out.sort(function(a,b){return b.n-a.n}).slice(0,5)}
+function lkBadge(t,id){var n=linksOf(t+":"+id).filter(function(o){return o.t==="n"})[0];return n?'<span class="meta">🔗 '+esc(itemTitle(n))+'</span>':""}
+function openKey(k){var t=k[0],id=k.slice(2);moreSub=null;openId=null;
+if(t==="n"){tab="notes";openId=id}else if(t==="t")tab="tasks";else if(t==="r")tab="rec";
+else if(t==="e"){var e=S.ev.filter(function(x){return x.id===id})[0];if(e){calSel=e.d;calM=new Date(e.d+"T00:00");calM.setDate(1)}tab="more";moreSub="cal"}
+else{tab="more";moreSub="rem"}
+render()}
+function bindLinks(n,cur,flush){
+var k="n:"+n.id;
+function row(o,sg){var t=TY[o.t],det=o.t==="e"?o.it.d+" "+o.it.tm:o.t==="m"?fmt(o.it.at):o.t==="t"?dueTxt(o.it):"";
+return '<div class="item"><span class="ico '+t[2]+'">'+ic(t[1])+'</span><div class="grow" data-lo="'+o.k+'"><b>'+esc(itemTitle(o))+'</b><span class="pre">'+t[0]+(det?' · '+det:'')+(sg?' · shares "'+esc(sg)+'"':'')+'</span></div>'+(sg?'<button class="btn" data-ln="'+o.k+'" style="padding:8px 12px">Link</button>':'<button class="x" data-ul="'+o.k+'">Unlink</button>')+'</div>'}
+function draw(){var box=$("lnk");if(!box)return;var L=linksOf(k),sg=suggestFor(n,cur).map(function(x){var f=findItem(x.k);if(f)f.hit=x.hit;return f}).filter(Boolean),opts='<option value="">Link something else…</option>';
+[["t",S.tasks],["e",S.ev],["r",S.rec],["m",S.rem],["n",S.notes.filter(function(x){return x!==n&&!x.pv})]].forEach(function(g){g[1].slice(0,40).forEach(function(it){var key=g[0]+":"+it.id;if(!isLinked(k,key))opts+='<option value="'+key+'">'+TY[g[0]][0]+' · '+esc(it.t||"Untitled")+'</option>'})});
+box.innerHTML='<h2>Connections</h2>'+(L.length?L.map(function(o){return row(o)}).join(""):'<p class="hint">Nothing connected yet. Link tasks, events, recordings and other notes to this note.</p>')+(sg.length?'<h2>Suggested</h2>'+sg.map(function(o){return row(o,o.hit)}).join(""):"")+'<div class="row" style="margin-top:8px"><select id="lpick">'+opts+'</select><button class="ghost" id="ladd">Link</button></div>'}
+draw();
+$("nb").addEventListener("blur",draw);$("nt").addEventListener("blur",draw);
+$("lnk").onclick=function(e){var lo=e.target.closest("[data-lo]"),ln=e.target.closest("[data-ln]"),ul=e.target.closest("[data-ul]");
+if(ln){addLink(k,ln.getAttribute("data-ln"));toast("Linked");draw();return}
+if(ul){unlink(k,ul.getAttribute("data-ul"));draw();return}
+if(e.target.id==="ladd"){var v=$("lpick").value;if(v){addLink(k,v);toast("Linked");draw()}return}
+if(lo){var key=lo.getAttribute("data-lo");flush().then(function(){openKey(key)})}}}
+
+/* HOME TODAY + INSIGHT */
+function moveOverdue(){var td=ds(new Date()),n=0;S.tasks.forEach(function(t){if(!t.done&&t.due&&t.due<td){t.due=td;n++}});save();toast(n?"Moved "+n+" task"+(n>1?"s":"")+" to today":"Nothing to move");homeView()}
+function homeToday(){
+var td=ds(new Date()),now=new Date(),open=S.tasks.filter(function(t){return !t.done}),dueT=open.filter(function(t){return t.due&&t.due<=td}).length,od=open.filter(function(t){return t.due&&t.due<td}),nd=open.filter(function(t){return !t.due}),
+rm=S.rem.filter(function(r){return !r.done&&ds(new Date(r.at))===td}).length,evs=S.ev.filter(function(e){return occurs(e,now)}).sort(function(a,b){return a.tm<b.tm?-1:1}),
+un=S.notes.filter(function(n){return !n.pv&&!(n.b||"").trim()&&!(n.a&&n.a.length)}).length,hm=pad(now.getHours())+":"+pad(now.getMinutes()),nx=evs.filter(function(e){return e.tm>=hm})[0],msg,act="";
+if(od.length){msg="You have "+od.length+" unfinished task"+(od.length>1?"s":"")+" from before today. Want me to move "+(od.length>1?"them":"it")+" to today?";act=["mv","Reorganize my day"]}
+else if(nd.length){msg=nd.length+" task"+(nd.length>1?"s have":" has")+" no date yet. Give "+(nd.length>1?"them":"it")+" a day so nothing slips.";act=["tasks","Add dates"]}
+else if(nx){msg="Next up: "+esc(nx.t)+" at "+fmtT(nx.tm)+".";act=["cal","Open calendar"]}
+else if(S.notes.length+S.tasks.length>5&&Date.now()-(S.lastBk||0)>14*864e5){msg="You have not backed up for a while. Save an encrypted backup so you never lose your information.";act=["bk","Back up now"]}
+else if(open.length){msg="You have "+open.length+" task"+(open.length>1?"s":"")+" left. One step at a time."}
+else msg="You are all caught up. Nice work!";
+function st(n,l,g){return '<div class="s" data-go="'+g+'" style="cursor:pointer"><b>'+n+'</b><span>'+l+'</span></div>'}
+return '<div class="card"><b>Today</b><div class="stats" style="margin-top:8px">'+st(dueT,"tasks","tasks-today")+st(rm,"reminders","rem")+st(evs.length,"meetings","cal")+st(un,"unfinished notes","notes")+'</div></div><div class="card" style="display:flex;gap:12px;align-items:center"><span class="ico g2">'+ic("spark")+'</span><div class="grow"><span class="badge">Smart insight</span><div style="margin-top:4px">'+msg+'</div>'+(act?'<button class="btn" data-go="'+act[0]+'" style="margin-top:8px;padding:8px 14px">'+act[1]+'</button>':'')+'</div></div>'}
+
+/* TRASH */
+var TL={note:"notes",task:"tasks",rec:"rec",rem:"rem",ev:"ev"},TT={note:["Note","note","g3"],task:["Task","check","g4"],rec:["Recording","mic","g2"],rem:["Reminder","bell","g6"],ev:["Event","cal","g5"]};
+function toTrash(type,id){var l=S[TL[type]],it=l.filter(function(x){return x.id===id})[0];if(!it)return;S[TL[type]]=l.filter(function(x){return x!==it});S.trash.push({type:type,item:it,del:Date.now()});save();toast("Moved to Trash")}
+function purgeEntry(e){if(e.type==="rec")fdel(e.item.id);if(e.type==="note"){if(e.item.pv){if(KEY&&e.item.enc)dec(e.item.enc).then(function(p){(p.a||[]).forEach(function(a){fdel(a.id)})}).catch(function(){})}else(e.item.a||[]).forEach(function(a){fdel(a.id)})}}
+function purgeOld(){var lim=Date.now()-30*864e5,keep=[];S.trash.forEach(function(e){if(e.del<lim&&!(e.type==="note"&&e.item.pv&&!KEY))purgeEntry(e);else keep.push(e)});if(keep.length!==S.trash.length){S.trash=keep;save()}}
+function trashView(){purgeOld();
+var L=S.trash.slice().sort(function(a,b){return b.del-a.del});
+$("app").innerHTML=hdr("Trash",{back:1,noS:1})+'<p class="sub">Deleted items stay here for 30 days. Private notes stay encrypted.</p>'+(L.length?'<button class="ghost" id="te" style="margin-bottom:6px">Empty trash</button>':'')+
+(L.length?L.map(function(e){var t=TT[e.type],it=e.item,left=Math.max(0,30-Math.floor((Date.now()-e.del)/864e5)),key=e.type+":"+it.id;return '<div class="item col"><div class="row" style="width:100%"><span class="ico '+t[2]+'">'+ic(t[1])+'</span><div class="grow"><b>'+esc(e.type==="note"&&it.pv?"Private note":(it.t||"Untitled"))+'</b><span class="pre">'+t[0]+' · deleted '+ago(e.del)+' · '+left+' days left</span></div></div><div class="row"><button class="ghost" data-rs="'+key+'">Restore</button><button class="ghost" data-df="'+key+'">Delete forever</button></div></div>'}).join(""):'<p class="empty">Trash is empty.</p>');
+function ent(k){var a=k.split(":");return S.trash.filter(function(e){return e.type===a[0]&&e.item.id===a[1]})[0]}
+var te=$("te");if(te)te.onclick=function(){if(confirm("Delete everything in Trash forever?")){S.trash.forEach(purgeEntry);S.trash=[];save();trashView()}};
+$("app").onclick=function(ev){var rs=ev.target.closest("[data-rs]"),df=ev.target.closest("[data-df]");
+if(rs){var e=ent(rs.getAttribute("data-rs"));if(e){S[TL[e.type]].push(e.item);S.trash=S.trash.filter(function(x){return x!==e});save();toast("Restored");trashView()}}
+if(df&&confirm("Delete this forever?")){var d=ent(df.getAttribute("data-df"));if(d){purgeEntry(d);S.trash=S.trash.filter(function(x){return x!==d});save();trashView()}}};
+}
+
+/* ENCRYPTED BACKUP */
+function pwDialog(title,sub,two,cb){var d=document.createElement("div");d.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:45;display:grid;place-items:center;padding:20px";
+d.innerHTML='<div class="card" style="width:100%;max-width:380px"><b>'+title+'</b><p class="hint">'+sub+'</p><input id="pw1" type="password" placeholder="Password" style="margin:8px 0"><input id="pw2" type="password" placeholder="Repeat password" style="margin-bottom:8px;display:'+(two?"block":"none")+'"><div class="row"><button class="ghost" id="pwc">Cancel</button><button class="btn" id="pwo">OK</button></div><div class="late" id="pwe" style="margin-top:6px"></div></div>';
+document.body.appendChild(d);$("pw1").focus();$("pwc").onclick=function(){d.remove()};
+$("pwo").onclick=function(){var a=$("pw1").value;if(a.length<6){$("pwe").textContent="Use at least 6 characters.";return}if(two&&a!==$("pw2").value){$("pwe").textContent="Passwords do not match.";return}d.remove();cb(a)}}
+function pwKey(pw,salt,use){return crypto.subtle.importKey("raw",new TextEncoder().encode(pw),"PBKDF2",false,["deriveKey"]).then(function(m){return crypto.subtle.deriveKey({name:"PBKDF2",salt:salt,iterations:200000,hash:"SHA-256"},m,{name:"AES-GCM",length:256},false,[use])})}
+function ab2b64(buf){var u=new Uint8Array(buf),t="",i;for(i=0;i<u.length;i+=32768)t+=String.fromCharCode.apply(null,u.subarray(i,i+32768));return btoa(t)}
+function blob2b64(bl){return new Promise(function(res){var r=new FileReader();r.onload=function(){res(String(r.result).split(",")[1]||"")};r.readAsDataURL(bl)})}
+function idbAll(){return idb().then(function(d){return new Promise(function(res,rej){var out=[],q=d.transaction("f").objectStore("f").openCursor();q.onsuccess=function(){var c=q.result;if(c){out.push({k:c.key,v:c.value});c.continue()}else res(out)};q.onerror=function(){rej(q.error)}})})}
+function exportBackup(pw){toast("Preparing backup…");
+idbAll().then(function(all){return Promise.all(all.map(function(e){var v=e.v;if(v&&v.enc)return{k:e.k,enc:1,iv:ab2b64(v.iv),ct:ab2b64(v.ct),type:v.type};return blob2b64(v.blob).then(function(b){return{k:e.k,type:v.type,name:v.name,b:b}})}))}).then(function(files){
+var salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12));
+return pwKey(pw,salt,"encrypt").then(function(k){return crypto.subtle.encrypt({name:"AES-GCM",iv:iv},k,new TextEncoder().encode(JSON.stringify({v:1,at:Date.now(),s:S,files:files})))}).then(function(ct){var out=new Uint8Array(33+ct.byteLength);out.set(new TextEncoder().encode("UAIN1"),0);out.set(salt,5);out.set(iv,21);out.set(new Uint8Array(ct),33);return out})}).then(function(out){
+var name="UniversalAINotebook-backup-"+ds(new Date())+".uain",FS=P("Filesystem"),SH=P("Share");
+if(FS&&SH){return FS.writeFile({path:name,data:ab2b64(out),directory:"CACHE"}).then(function(w){return SH.share({title:"Universal AI Notebook backup",files:[w.uri]}).catch(function(){})}).then(function(){setTimeout(function(){FS.deleteFile({path:name,directory:"CACHE"}).catch(function(){})},600000)})}
+var u=URL.createObjectURL(new Blob([out],{type:"application/octet-stream"})),a=document.createElement("a");a.href=u;a.download=name;a.click()}).then(function(){S.lastBk=Date.now();save();toast("Backup ready")}).catch(function(){alert("Could not create the backup.")})}
+function restoreBackup(){var i=document.createElement("input");i.type="file";i.accept="*/*";i.onchange=function(){var f=i.files[0];if(!f)return;var r=new FileReader();r.onload=function(){var u=new Uint8Array(r.result);
+if(String.fromCharCode.apply(null,u.subarray(0,5))!=="UAIN1"){alert("This is not a Universal AI Notebook backup.");return}
+pwDialog("Backup password","Enter the password you chose when you exported this backup.",false,function(pw){
+pwKey(pw,u.slice(5,21),"decrypt").then(function(k){return crypto.subtle.decrypt({name:"AES-GCM",iv:u.slice(21,33)},k,u.slice(33))}).then(function(pt){var d=JSON.parse(new TextDecoder().decode(pt));
+if(!confirm("Restoring replaces everything on this phone with the backup ("+(d.s.notes||[]).length+" notes, "+(d.s.tasks||[]).length+" tasks). Continue?"))return;
+return idb().then(function(db){return new Promise(function(res,rej){var t=db.transaction("f","readwrite"),st=t.objectStore("f");st.clear();d.files.forEach(function(e){st.put(e.enc?{enc:1,iv:ub64(e.iv),ct:ub64(e.ct).buffer,type:e.type}:{blob:new Blob([ub64(e.b)],{type:e.type}),name:e.name,type:e.type},e.k)});t.oncomplete=res;t.onerror=function(){rej(t.error)}})}).then(function(){localStorage.setItem(SKEY,JSON.stringify(d.s));location.reload()})}).catch(function(){alert("Could not open the backup. Check the password and the file.")})})};r.readAsArrayBuffer(f)};i.click()}
+function backupView(){
+$("app").innerHTML=hdr("Backup and restore",{back:1,noS:1})+'<div class="card"><div class="row"><span class="ico g3">'+ic("cloud")+'</span><div class="grow"><b>Encrypted backup</b><span class="pre">Saves notes, tasks, recordings, attachments and settings in one file locked with a password you choose.</span></div></div><button class="btn full" id="bx1">Export encrypted backup</button><button class="ghost" id="bx2" style="width:100%;margin-top:8px;justify-content:center">Restore from backup</button><p class="hint">Keep the password safe. Without it the backup cannot be opened. Recordings make the file larger.</p></div>';
+$("bx1").onclick=function(){pwDialog("Backup password","Choose a password for this backup file.",true,exportBackup)};
+$("bx2").onclick=restoreBackup}
 
 /* UNIVERSAL SEARCH — PHASE 1 */
 function searchView(){
@@ -895,6 +987,7 @@ applyTheme();
 $("splash").innerHTML='<div class="sl"><span class="sg">'+ic("spark")+'</span><div class="sn">Universal AI Notebook</div><div class="stg">Capture · Think · Organize · Achieve</div><div class="ld"><i></i></div></div>';
 setTimeout(function(){$("splash").classList.add("out")},1300);
 if(S.pin)showLock();
+purgeOld();
 render();sync();
 })();
 </script>
