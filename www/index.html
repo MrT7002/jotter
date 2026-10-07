@@ -409,27 +409,41 @@ S.rem.forEach(function(r){if(m(r.t))hit.push("• Reminder: "+r.t)});
 S.ev.forEach(function(e){if(m(e.t))hit.push("• Event: "+e.t)});
 return hit.length?"I found:\n"+hit.slice(0,8).join("\n"):"I could not find that in your saved information.";
 }
-function aiDraw(typing){var c=$("chat");if(!c)return;c.innerHTML=aiMsgs.map(function(m){return '<div class="bub'+(m.me?' me':'')+'">'+esc(m.t).replace(/\n/g,"<br>")+'</div>'}).join("")+(typing?'<div class="bub typing"><i></i><i></i><i></i></div>':'');if(aiMsgs.length)window.scrollTo(0,document.body.scrollHeight)}
-function aiAsk(q){q=q.trim();if(!q)return;aiMsgs.push({me:1,t:q});aiDraw(true);var a=aiAnswer(q);setTimeout(function(){aiMsgs.push({t:a});aiDraw(false)},600)}
+function aiDraw(typing){var c=$("chat");if(!c)return;c.innerHTML=aiMsgs.map(function(m){return '<div class="bub'+(m.me?' me':'')+'">'+esc(m.t).replace(/\n/g,"<br>")+(m.via?'<span class="meta">via '+esc(m.via)+'</span>':'')+'</div>'}).join("")+(typing?'<div class="bub typing"><i></i><i></i><i></i></div>':'');if(aiMsgs.length)window.scrollTo(0,document.body.scrollHeight)}
+function aiCfg(){var a=(S.set&&S.set.ai)||{},u=(a.url||"").trim().replace(/\/+$/,"");return u?{url:u,token:(a.token||"").trim()}:null}
+function aiCall(task,payload){var c=aiCfg();if(!c)return Promise.reject(new Error("AI service is not set up"));
+var ctl=new AbortController(),t=setTimeout(function(){ctl.abort()},60000),h={"Content-Type":"application/json"};if(c.token)h["x-app-token"]=c.token;
+return fetch(c.url+"/api/ai",{method:"POST",headers:h,body:JSON.stringify(Object.assign({task:task},payload)),signal:ctl.signal}).then(function(r){return r.json().catch(function(){return{success:false,error:"Unexpected reply from the AI service"}})}).then(function(j){clearTimeout(t);if(!j||!j.success)throw new Error((j&&j.error)||"AI request failed");return j}).catch(function(e){clearTimeout(t);throw e})}
+function aiNotesText(){return S.notes.filter(function(n){return !n.pv&&(n.b||"").trim()}).sort(function(a,b){return b.ts-a.ts}).slice(0,5).map(function(n){return (n.t||"Untitled")+":\n"+n.b}).join("\n\n").slice(0,12000)}
+function aiAsk(q){q=q.trim();if(!q)return;aiMsgs.push({me:1,t:q});aiDraw(true);
+if(aiCfg()){var txt=/summar/i.test(q)&&/note/i.test(q)?aiNotesText():"",p;
+if(txt)p=aiCall("summarize",{input:txt});
+else p=aiCall("chat",{messages:aiMsgs.filter(function(m){return !m.off}).slice(-9).map(function(m){return{role:m.me?"user":"assistant",content:String(m.t).slice(0,7900)}})});
+p.then(function(r){aiMsgs.push({t:r.text,via:r.provider+(r.fallback?" (backup)":"")});aiDraw(false)}).catch(function(){aiMsgs.push({t:aiAnswer(q)+"\n\nOnline AI is not reachable right now, so this answer comes from your saved data only.",off:1});aiDraw(false)});return}
+var a=aiAnswer(q);setTimeout(function(){aiMsgs.push({t:a});aiDraw(false)},600)}
 function aiView(){
-$("app").innerHTML=hdr("AI Assistant",{back:1,noS:1,badge:"Beta"})+'<div class="card" style="display:flex;gap:12px;align-items:center"><span class="ico g2">'+ic("spark")+'</span><div class="grow"><b>Ask about your notes, tasks and plans</b><span class="pre">Works offline on what you saved. Explanations and reports arrive with the online stage.</span></div></div><h2>You can ask me</h2><div class="chips wrap">'+["Summarize my notes","What tasks do I have?","What is on today?","Explain this topic","Find information"].map(function(c){return '<button class="chip" data-q="'+c+'">'+c+'</button>'}).join("")+'</div><div id="chat"></div><div class="compose"><input id="aq" placeholder="Type your question here…"><button class="ib acc" id="asend" aria-label="Send">'+ic("send")+'</button></div>';
+$("app").innerHTML=hdr("AI Assistant",{back:1,noS:1,badge:"Beta"})+'<div class="card" style="display:flex;gap:12px;align-items:center"><span class="ico g2">'+ic("spark")+'</span><div class="grow"><b>Ask about your notes, tasks and plans</b><span class="pre">Answers from your saved data. Add your AI service in Profile for online answers. Private notes are never sent.</span></div></div><h2>You can ask me</h2><div class="chips wrap">'+["Summarize my notes","What tasks do I have?","What is on today?","Explain this topic","Find information"].map(function(c){return '<button class="chip" data-q="'+c+'">'+c+'</button>'}).join("")+'</div><div id="chat"></div><div class="compose"><input id="aq" placeholder="Type your question here…"><button class="ib acc" id="asend" aria-label="Send">'+ic("send")+'</button></div>';
 aiDraw(false);
 function send(){var v=$("aq").value;$("aq").value="";aiAsk(v)}
-$("app").onclick=function(e){var q=e.target.getAttribute("data-q");if(q==="Find information"){$("aq").placeholder="Type a word to look for…";$("aq").focus();return}if(q)aiAsk(q)};
+$("app").onclick=function(e){var q=e.target.getAttribute("data-q");if(q==="Find information"){$("aq").placeholder="Type a word to look for…";$("aq").focus();return}if(q==="Explain this topic"&&aiCfg()){$("aq").placeholder="Which topic should I explain?";$("aq").focus();return}if(q)aiAsk(q)};
 $("asend").onclick=send;$("aq").onkeydown=function(e){if(e.key==="Enter")send()};
 }
 
 /* PROFILE AND THEME */
+function aiSvcHtml(){var a=(S.set&&S.set.ai)||{};return '<h2>AI service</h2><div class="card"><div class="row"><span class="ico g2">'+ic("spark")+'</span><div class="grow"><b>Online AI</b><span class="pre">Connect your backend to unlock online answers. Private notes are never sent.</span></div></div><input id="aiu" placeholder="https://your-backend.onrender.com" value="'+esc(a.url||"")+'" style="margin:10px 0 8px"><input id="ait" type="password" placeholder="App token (only if you set one)" value="'+esc(a.token||"")+'"><div class="row" style="margin-top:10px"><button class="btn" id="aisv">Save</button><button class="ghost" id="aitst">Test connection</button></div><p class="hint" id="aist"></p></div>'}
+function bindAiSvc(){var sv=$("aisv");if(!sv)return;function keep(){S.set.ai={url:$("aiu").value.trim(),token:$("ait").value.trim()};save()}
+sv.onclick=function(){keep();toast("Saved")};
+$("aitst").onclick=function(){keep();var st=$("aist");st.textContent="Testing… the first request can take up to a minute.";aiCall("chat",{messages:[{role:"user",content:"Reply with the single word: ready"}]}).then(function(r){st.textContent="Connected. Answered by "+r.provider+(r.fallback?" (backup)":"")+"."}).catch(function(e){st.textContent="Could not connect: "+((e&&e.message)||"error")})}}
 function setView(){
 var nm=(S.set.name||"").trim(),tk=S.tasks,dn=tk.filter(function(t){return t.done}).length;
 function tile(n,l){return '<div class="tile"><b>'+n+'</b><span>'+l+'</span></div>'}
 $("app").innerHTML=hdr("Profile",{back:1,noS:1})+'<div class="card" style="display:flex;gap:14px;align-items:center"><span class="av big" id="avb">'+esc((nm||"M").charAt(0).toUpperCase())+'</span><div class="grow"><input id="nm" placeholder="Your name" value="'+esc(nm)+'"><span class="pre" style="margin-top:4px">Shown in your greeting</span></div></div>'+
 '<div class="card"><div class="row"><b>Storage on this phone</b><span class="grow"></span><span id="su" class="pre">checking…</span></div><div class="sbar"><i id="sb" style="width:0%"></i></div></div>'+
-'<h2>Productivity</h2><div class="grid">'+tile(dn,"tasks done")+tile(tk.length-dn,"tasks left")+tile(S.notes.length,"notes")+tile(S.rec.length,"recordings")+tile(S.ev.filter(function(e){return occurs(e,new Date())}).length,"events today")+tile(S.al.filter(function(a){return a.on}).length,"alarms on")+'</div>'+
+aiSvcHtml()+'<h2>Productivity</h2><div class="grid">'+tile(dn,"tasks done")+tile(tk.length-dn,"tasks left")+tile(S.notes.length,"notes")+tile(S.rec.length,"recordings")+tile(S.ev.filter(function(e){return occurs(e,new Date())}).length,"events today")+tile(S.al.filter(function(a){return a.on}).length,"alarms on")+'</div>'+
 '<div class="item" data-m="theme"><span class="ico g5">'+ic("palette")+'</span><div class="grow"><b>Theme settings</b><span class="pre">Colours, fonts and background</span></div><span class="chev">'+ic("chev")+'</span></div>'+secHtml()+
 '<div class="item" style="opacity:.7"><span class="ico g3">'+ic("cloud")+'</span><div class="grow"><b>Cloud sync</b><span class="pre">Coming with the online stage</span></div></div>'+
 '<div class="item" data-m="about"><span class="ico g1">'+ic("spark")+'</span><div class="grow"><b>About Universal AI Notebook</b><span class="pre">Your ideas. Your notes. Your future.</span></div></div>';
-bindSec();
+bindSec();bindAiSvc();
 $("nm").oninput=function(){S.set.name=this.value;var a=$("avb");if(a)a.textContent=(this.value.trim()||"M").charAt(0).toUpperCase();save()};
 $("app").onclick=function(e){var el=e.target.closest("[data-m]");if(!el)return;var m=el.getAttribute("data-m");if(m==="theme"){moreSub="theme";render()}else if(m==="about")alert("Universal AI Notebook\nYour ideas. Your notes. Your future.\nVersion 1.0")};
 try{navigator.storage.estimate().then(function(r){var u=r.usage||0,q=r.quota||1;$("su").textContent=kb(u)+" used";$("sb").style.width=Math.max(2,Math.min(100,u/q*100))+"%"})}catch(e){$("su").textContent=""}
