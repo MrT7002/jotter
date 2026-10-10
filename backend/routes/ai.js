@@ -3,6 +3,7 @@
 const router = require("../ai/router");
 const { KNOWN_TASKS, IMPLEMENTED_TASKS } = require("../ai/capabilities");
 const { sendJson, readJsonBody, safeEqual, clientIp, rateLimit, HttpError } = require("../lib/http");
+const auth = require("../lib/auth");
 
 const LIMITS = {
   maxBodyBytes: 1000000,
@@ -16,13 +17,18 @@ function fail(status, code, error) {
   return { ok: false, status, body: { success: false, error, code, retryable: false } };
 }
 
-// Authentication hook. Today: optional shared token. Later: replace with real user auth.
-function authenticate(req) {
+// Who is calling? With accounts configured (SUPABASE_URL + SUPABASE_ANON_KEY) a signed-in user is required.
+// Without accounts, the optional shared APP_TOKEN is used (handy while testing).
+async function authenticate(req) {
+  if (auth.enabled()) {
+    const v = await auth.verifyToken(auth.bearer(req));
+    return v.ok ? { ok: true, user: v.user } : { ok: false, status: v.status, code: v.code };
+  }
   const expected = process.env.APP_TOKEN;
   if (!expected) return { ok: true };
   const given = req.headers["x-app-token"];
   if (typeof given === "string" && safeEqual(given, expected)) return { ok: true };
-  return { ok: false };
+  return { ok: false, status: 401, code: "unauthorized" };
 }
 
 function isNonEmptyString(v) {
@@ -48,6 +54,10 @@ function validateOptions(raw) {
   if (raw.fast !== undefined) {
     if (typeof raw.fast !== "boolean") return { ok: false, error: "options.fast must be true or false" };
     options.fast = raw.fast;
+  }
+  if (raw.style !== undefined) {
+    if (!["short", "balanced", "detailed"].includes(raw.style)) return { ok: false, error: "options.style must be short, balanced or detailed" };
+    options.style = raw.style;
   }
   return { ok: true, options };
 }
@@ -105,12 +115,19 @@ async function handleAi(req, res) {
     return sendJson(res, 405, { success: false, error: "Use POST", code: "method_not_allowed", retryable: false }, { Allow: "POST, OPTIONS" });
   }
 
-  if (!authenticate(req).ok) {
-    return sendJson(res, 401, { success: false, error: "Unauthorized", code: "unauthorized", retryable: false });
+  const who = await authenticate(req);
+  if (!who.ok) {
+    const down = who.status === 503;
+    return sendJson(res, who.status || 401, {
+      success: false,
+      error: down ? "Sign-in service unavailable. Try again." : "Please sign in",
+      code: who.code || "unauthorized",
+      retryable: down,
+    });
   }
 
   const max = Number(process.env.RATE_LIMIT_PER_MIN) > 0 ? Number(process.env.RATE_LIMIT_PER_MIN) : 30;
-  const rl = rateLimit(clientIp(req), max, 60000);
+  const rl = rateLimit(who.user ? "u:" + who.user.id : clientIp(req), max, 60000);
   if (!rl.ok) {
     return sendJson(
       res,
@@ -133,8 +150,16 @@ async function handleAi(req, res) {
   const v = validate(body);
   if (!v.ok) return sendJson(res, v.status, v.body);
 
+  if (who.user) {
+    const u = auth.getUsage(who.user.id);
+    if (u.used >= u.limit) {
+      return sendJson(res, 429, { success: false, error: "You have used today's free AI limit. It resets tomorrow.", code: "daily_limit", retryable: false, usage: u });
+    }
+  }
+
   const result = await router.generate(v.request);
+  if (result.success && who.user) result.usage = auth.addUsage(who.user.id);
   return sendJson(res, result.success ? 200 : 503, result);
 }
 
-module.exports = { handleAi, validate, LIMITS };
+module.exports = { handleAi, validate, LIMITS, authenticate };
