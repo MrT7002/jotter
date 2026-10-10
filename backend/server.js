@@ -2,6 +2,9 @@
 // Jotter AI backend. Zero dependencies: only Node's built-in modules (Node 20 or newer).
 const http = require("http");
 const { handleAi } = require("./routes/ai");
+const { handleUsage } = require("./routes/usage");
+const { handleTranscribe } = require("./routes/transcribe");
+const pages = require("./routes/pages");
 const { applyCors, sendJson } = require("./lib/http");
 const providers = require("./ai/providers");
 
@@ -16,6 +19,11 @@ function createServer() {
       const path = (req.url || "/").split("?")[0];
 
       if (path === "/api/ai") return await handleAi(req, res);
+      if (path === "/api/usage") return await handleUsage(req, res);
+      if (path === "/api/transcribe") return await handleTranscribe(req, res);
+
+      if (path === "/reset") return pages.sendHtml(res, 200, pages.resetPage());
+      if (path === "/" && String(req.headers.accept || "").includes("text/html")) return pages.sendHtml(res, 200, pages.donePage());
 
       if (path === "/health" || path === "/") {
         const configured = {};
@@ -32,7 +40,7 @@ function createServer() {
       res.end();
     }
   });
-  server.requestTimeout = 30000;
+  server.requestTimeout = 120000; // allows a long audio upload on a slow phone connection
   return server;
 }
 

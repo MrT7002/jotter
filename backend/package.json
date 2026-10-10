@@ -7,7 +7,9 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --env-file=.env server.js",
-    "test": "node test/run-tests.js"
+    "test": "node test/run-tests.js && node test/auth-tests.js && node test/transcribe-tests.js",
+    "test:transcribe": "node test/transcribe-tests.js",
+    "test:auth": "node test/auth-tests.js"
   },
   "engines": {
     "node": ">=20"
