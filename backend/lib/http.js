@@ -24,7 +24,7 @@ function applyCors(req, res) {
   if (allowedOrigins().includes(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-app-token");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-app-token, Authorization");
     res.setHeader("Access-Control-Max-Age", "600");
   }
 }
@@ -88,6 +88,40 @@ function readJsonBody(req, maxBytes) {
   });
 }
 
+// Reads a raw (binary) body with a hard size limit, e.g. an audio upload. Throws HttpError on problems.
+function readRawBody(req, maxBytes) {
+  return new Promise((resolve, reject) => {
+    const declared = Number(req.headers["content-length"] || 0);
+    if (declared > maxBytes) {
+      req.resume();
+      return reject(new HttpError(413, "too_large", "File is too large"));
+    }
+    const chunks = [];
+    let size = 0;
+    let done = false;
+    req.on("data", (c) => {
+      if (done) return;
+      size += c.length;
+      if (size > maxBytes) {
+        done = true;
+        req.resume();
+        return reject(new HttpError(413, "too_large", "File is too large"));
+      }
+      chunks.push(c);
+    });
+    req.on("end", () => {
+      if (done) return;
+      done = true;
+      resolve(Buffer.concat(chunks));
+    });
+    req.on("error", () => {
+      if (done) return;
+      done = true;
+      reject(new HttpError(400, "bad_request", "Could not read the upload"));
+    });
+  });
+}
+
 function safeEqual(a, b) {
   const x = Buffer.from(String(a));
   const y = Buffer.from(String(b));
@@ -119,4 +153,4 @@ function rateLimit(key, max, windowMs) {
 }
 function resetRateLimits() { hits.clear(); }
 
-module.exports = { applyCors, sendJson, readJsonBody, safeEqual, clientIp, rateLimit, resetRateLimits, HttpError };
+module.exports = { applyCors, sendJson, readJsonBody, readRawBody, safeEqual, clientIp, rateLimit, resetRateLimits, HttpError };
