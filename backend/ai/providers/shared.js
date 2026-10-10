@@ -70,4 +70,4 @@ async function postJson(provider, url, { headers = {}, body, timeoutMs }) {
   }
 }
 
-module.exports = { ProviderError, postJson, num };
+module.exports = { ProviderError, postJson, num, classify };
