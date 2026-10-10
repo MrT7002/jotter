@@ -33,7 +33,7 @@ async function generate(request) {
     return { success: false, error: "AI is not configured for this request", code: "no_provider", retryable: false };
   }
 
-  const built = prompts.build(task, { input, messages });
+  const built = prompts.build(task, { input, messages, options });
   const errors = [];
 
   for (const name of names.slice(0, MAX_ATTEMPTS)) {

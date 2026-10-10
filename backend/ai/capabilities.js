@@ -15,7 +15,7 @@ const KNOWN_TASKS = [
 ];
 
 // Tasks the API accepts today. Add a task here once its prompt/handling exists.
-const IMPLEMENTED_TASKS = ["chat", "summarize", "explain"];
+const IMPLEMENTED_TASKS = ["chat", "summarize", "explain", "task_extraction"];
 
 // Plain text tasks that a "fast" hint may send to Groq first.
 const TEXT_TASKS = new Set(["chat", "summarize", "explain", "task_extraction", "search"]);
