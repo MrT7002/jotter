@@ -123,7 +123,7 @@ test("/reset serves a password page with the public Supabase config only", async
 });
 test("the root page is friendly in a browser and JSON for health checks", async () => {
   const b = await fetch(base + "/", { headers: { accept: "text/html" } });
-  assert.match(await b.text(), /All set/);
+  assert.match(await b.text(), /Universal AI Notebook/);
   const j = await fetch(base + "/health");
   assert.equal((await j.json()).ok, true);
 });
