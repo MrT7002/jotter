@@ -955,9 +955,16 @@ r.onload=function(){FS.writeFile({path:pth,data:String(r.result).split(",")[1],d
 var MR=null,chunks=[],acc=0,seg0=0,running=false,vnote=false,tick=null,nsub="n";
 function elapsed(){return acc+(running?Date.now()-seg0:0)}
 function mmss(ms){var s=Math.floor(ms/1000);return pad(Math.floor(s/60))+":"+pad(s%60)}
-function micErr(){msg("Could not start recording. Allow the microphone for Jotter in phone Settings.")}
-function recStart(){if(!navigator.mediaDevices||!window.MediaRecorder)return Promise.reject();
-return navigator.mediaDevices.getUserMedia({audio:true}).then(function(st){chunks=[];MR=new MediaRecorder(st);try{ACX=new(window.AudioContext||window.webkitAudioContext)();ANA=ACX.createAnalyser();ANA.fftSize=256;ACX.createMediaStreamSource(st).connect(ANA)}catch(x){ANA=null}MR.ondataavailable=function(e){if(e.data&&e.data.size)chunks.push(e.data)};MR.start(1000);acc=0;seg0=Date.now();running=true;clearInterval(tick);
+function micErr(e){var n=(e&&e.name)||"",m="Could not start recording.";
+if(n==="Denied"||n==="NotAllowedError"||n==="SecurityError")m="The microphone is blocked. Open phone Settings, then Apps, then Universal AI Notebook, then Permissions, then Microphone, and choose Allow.";
+else if(n==="NotFoundError")m="No microphone was found on this device.";
+else if(n==="NotReadableError"||n==="AbortError")m="Another app may be using the microphone. Close it and try again.";
+else if(n==="Unsupported")m="Recording is not supported on this device.";
+else if(n)m="Could not start recording ("+n+").";
+msg(m)}
+function micPerm(){var N=P("SpeechRecognition");if(!N||!N.requestPermissions)return Promise.resolve(true);return N.requestPermissions().then(function(p){return p.speechRecognition==="granted"},function(){return true})}
+function recStart(){if(!navigator.mediaDevices||!window.MediaRecorder)return Promise.reject({name:"Unsupported"});
+return micPerm().then(function(ok){if(!ok)throw {name:"Denied"};return navigator.mediaDevices.getUserMedia({audio:true})}).then(function(st){chunks=[];MR=new MediaRecorder(st);try{ACX=new(window.AudioContext||window.webkitAudioContext)();ANA=ACX.createAnalyser();ANA.fftSize=256;ACX.createMediaStreamSource(st).connect(ANA)}catch(x){ANA=null}MR.ondataavailable=function(e){if(e.data&&e.data.size)chunks.push(e.data)};MR.start(1000);acc=0;seg0=Date.now();running=true;clearInterval(tick);
 tick=setInterval(function(){var t=$("rtm");if(t)t.textContent=hms(elapsed());var v=$("vn");if(v&&vnote)v.textContent="Stop "+mmss(elapsed())},500)})}
 function recPause(){if(MR&&running){MR.pause();acc+=Date.now()-seg0;running=false}}
 function recResume(){if(MR&&!running){MR.resume();seg0=Date.now();running=true}}
