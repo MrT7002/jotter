@@ -28,7 +28,14 @@ function sendHtml(res, status, html) {
 }
 
 function donePage() {
-  return page("All set", "<h1>All set</h1><p>You can close this page and go back to the Universal AI Notebook app.</p>");
+  // Email confirmation links land here (Supabase Site URL). The link puts a token in the address
+  // after the "#"; this page shows a friendly message and then removes the token from the address bar.
+  const script =
+    "var h=new URLSearchParams(location.hash.slice(1)),t=document.getElementById('t'),m=document.getElementById('m');" +
+    "if(h.get('error_description')){t.textContent='Link problem';m.textContent=h.get('error_description').replace(/\\+/g,' ')+' Open the app and ask for a new link.';m.className='e';}" +
+    "else if(h.get('access_token')){t.textContent='Email confirmed';m.textContent='Your email is confirmed. Open the Universal AI Notebook app and sign in.';m.className='o';}" +
+    "history.replaceState(null,'',location.pathname);";
+  return page("Universal AI Notebook", '<h1 id="t">Universal AI Notebook</h1><p id="m">The server is running.</p>', script);
 }
 
 function resetPage() {
