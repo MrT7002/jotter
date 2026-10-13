@@ -956,7 +956,7 @@ var MR=null,chunks=[],acc=0,seg0=0,running=false,vnote=false,tick=null,nsub="n";
 function elapsed(){return acc+(running?Date.now()-seg0:0)}
 function mmss(ms){var s=Math.floor(ms/1000);return pad(Math.floor(s/60))+":"+pad(s%60)}
 function micErr(e){var n=(e&&e.name)||"",m="Could not start recording.";
-if(n==="Denied"||n==="NotAllowedError"||n==="SecurityError")m="The microphone is blocked. Open phone Settings, then Apps, then Universal AI Notebook, then Permissions, then Microphone, and choose Allow.";
+if(n==="Denied"||n==="NotAllowedError"||n==="SecurityError")m="The microphone is blocked. Open phone Settings, then Apps, then Universal AI Notebook, then Permissions, then Microphone, and choose Allow. If it is already allowed, update the app to the newest version. ("+n+")";
 else if(n==="NotFoundError")m="No microphone was found on this device.";
 else if(n==="NotReadableError"||n==="AbortError")m="Another app may be using the microphone. Close it and try again.";
 else if(n==="Unsupported")m="Recording is not supported on this device.";
