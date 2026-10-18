@@ -287,6 +287,76 @@ details.more{margin-top:8px}details.more summary{color:var(--acc);font-weight:60
 mark{background:rgba(59,99,245,.2);color:inherit;border-radius:3px;padding:0 1px}
 .rsrc{font-size:.7rem;font-weight:700;color:var(--mute);text-transform:uppercase;letter-spacing:.05em}
 .recent{display:flex;align-items:center;gap:12px;padding:13px 4px;border-bottom:1px solid var(--line);cursor:pointer}.recent span.t{flex:1}
+/* ===== JOTTER PREMIUM GLASS UI REFRESH ===== */
+:root{
+ --bg:#eef3f9;--card:rgba(255,255,255,.76);--card2:rgba(246,249,255,.88);
+ --ink:#18243a;--mute:#718096;--line:rgba(126,146,177,.22);
+ --acc:#5379f6;--accink:#fff;--bad:#d94b64;--glow:rgba(83,121,246,.17);
+ --glass-shadow:0 12px 36px rgba(32,53,91,.075);
+}
+[data-theme=light]{
+ --bg:#eef3f9;--card:rgba(255,255,255,.78);--card2:rgba(247,249,255,.9);
+ --ink:#18243a;--mute:#718096;--line:rgba(126,146,177,.22);--acc:#5379f6;
+ --accink:#fff;--bad:#d94b64;--glow:rgba(83,121,246,.16);
+}
+[data-theme=blue]{--bg:#eaf0ff;--card:rgba(255,255,255,.78);--card2:rgba(242,246,255,.92);--ink:#18284d;--mute:#687ba7;--line:rgba(88,116,184,.2);--acc:#426cf5;--accink:#fff;--glow:rgba(66,108,245,.18)}
+[data-theme=purple]{--bg:#f3edff;--card:rgba(255,255,255,.8);--card2:rgba(250,246,255,.92);--ink:#2c2048;--mute:#83739f;--line:rgba(135,107,181,.2);--acc:#8860dc;--accink:#fff;--glow:rgba(136,96,220,.17)}
+[data-theme=green]{--bg:#eaf7f1;--card:rgba(255,255,255,.8);--card2:rgba(244,252,248,.92);--ink:#18382d;--mute:#6d9183;--line:rgba(77,145,117,.2);--acc:#299b77;--accink:#fff;--glow:rgba(41,155,119,.16)}
+[data-theme=sunset]{--bg:#fff1e9;--card:rgba(255,255,255,.8);--card2:rgba(255,248,243,.92);--ink:#452b2b;--mute:#a17c75;--line:rgba(183,123,108,.2);--acc:#e87559;--accink:#fff;--glow:rgba(232,117,89,.17)}
+html{min-height:100%;background:var(--bg)}
+body{background:var(--bg);color:var(--ink)}
+[data-bg=modern] body:before{
+ background:radial-gradient(70% 42% at 100% 0,var(--glow),transparent 72%),
+ radial-gradient(60% 42% at 0 100%,var(--glow),transparent 72%),
+ linear-gradient(145deg,rgba(255,255,255,.3),transparent 58%);
+}
+#app{max-width:760px;padding:18px 17px 120px}
+h2{letter-spacing:.015em;font-size:.82rem;text-transform:uppercase}
+.hdr{margin:4px 0 20px}
+.brand{letter-spacing:-.035em}
+.logo{box-shadow:0 7px 18px var(--glow);border-radius:15px}
+.badge{border:1px solid var(--line);background:var(--card)}
+.ib,button,.btn,.chip,.tile,.qt,.item{transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease,background .18s ease}
+.ib,.btn,.ghost{border-radius:14px}
+input,textarea,select{
+ background:var(--card);border:1px solid var(--line);border-radius:14px;
+ color:var(--ink);box-shadow:inset 0 1px 0 rgba(255,255,255,.28)
+}
+input:focus,textarea:focus,select:focus{border-color:var(--acc);box-shadow:0 0 0 3px var(--glow)}
+button,.btn{font-weight:650}
+button:active,.btn:active,.item:active,.qt:active,.tile:active{transform:scale(.985)}
+.card,.hero,.stats .s,.tile,.qt,.item,.panel,.modal,.sheet{
+ background:var(--card);border:1px solid var(--line);box-shadow:var(--glass-shadow);
+ backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-radius:22px
+}
+.card{padding:16px}
+.item{border-radius:17px}
+.item:hover,.tile:hover,.qt:hover{border-color:color-mix(in srgb,var(--acc) 34%,var(--line));box-shadow:0 12px 28px var(--glow)}
+.hero{overflow:hidden}
+.stats .s{border-radius:18px}
+.tile,.qt{border-radius:19px}
+.chip{border:1px solid var(--line);background:var(--card);border-radius:999px}
+.chip.on{background:var(--acc);color:var(--accink);border-color:transparent;box-shadow:0 6px 16px var(--glow)}
+.sw{box-shadow:inset 0 0 0 1px var(--line)}
+.empty,.hint{border-radius:18px}
+.x{border-radius:12px}
+@media(min-width:700px){
+ #app{padding:26px 24px 120px}
+ .card{padding:20px}
+}
+@media(prefers-reduced-motion:reduce){
+ *,*:before,*:after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+}
+
+/* dark glass palette (the light refresh above would otherwise override dark mode) */
+[data-theme=dark]{
+ --bg:#0a1130;--card:rgba(22,33,76,.66);--card2:rgba(30,44,98,.72);
+ --ink:#eef1ff;--mute:#9aa6d1;--line:rgba(140,162,235,.2);
+ --acc:#6f8cff;--accink:#fff;--bad:#ff6b7f;--glow:rgba(111,140,255,.2);
+ --glass-shadow:0 12px 34px rgba(2,6,24,.45);
+}
+[data-theme=dark] input,[data-theme=dark] textarea,[data-theme=dark] select{box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+[data-theme=dark][data-bg=modern] body:before{background:radial-gradient(70% 42% at 100% 0,var(--glow),transparent 72%),radial-gradient(60% 42% at 0 100%,rgba(140,90,255,.16),transparent 72%)}
 </style>
 </head>
 <body>
@@ -341,7 +411,7 @@ var moreSub=null,plusFn=null;
 var LGN=0;
 function logo(sz){LGN++;var id="lg"+LGN;return '<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="'+id+'" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3B82FF"/><stop offset="1" stop-color="#7C3AED"/></linearGradient></defs><rect width="64" height="64" rx="17" fill="url(#'+id+')"/><path d="M40 15v21c0 7.5-5 12-11.5 12-5 0-8.6-2.6-10.5-6.5" fill="none" stroke="#fff" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/></svg>'}
 function drawTabs(){$("tabs").innerHTML=TABS.map(function(t){if(t[0]==="plus")return '<button class="plusb" data-t="plus" aria-label="Create">'+ic("plus")+'</button>';return '<button data-t="'+t[0]+'" class="'+(tab===t[0]?"on":"")+'">'+ic(t[2])+'<span>'+t[1]+'</span></button>'}).join("")}
-$("tabs").addEventListener("click",function(e){var b=e.target.closest("[data-t]");if(b){try{navigator.vibrate(8)}catch(x){}if(b.getAttribute("data-t")==="plus"){openCreate();return}tab=b.getAttribute("data-t");openId=null;moreSub=null;render()}});
+$("tabs").addEventListener("click",function(e){var b=e.target.closest("[data-t]");if(b){try{navigator.vibrate(8)}catch(x){}if(b.getAttribute("data-t")==="plus"){openCreate();return}tab=b.getAttribute("data-t");openId=null;moreSub=null;navRoot=true;render()}});
 function closeSheet(){var a=document.getElementById("sheet2");if(a)a.remove()}
 function openCreate(){closeSheet();var el=document.createElement("div");el.id="sheet2";
 var O=[["note","note","g5","New Note","Write something"],["rec","mic","g4","Record Audio","Lecture or meeting"],["photo","scan","g3","Take Photo","Add to a new note"],["file","upload","g1","Upload Document","PDF, image or file"],["task","check","g2","Create Task","Add to your list"],["ai","spark","g6","Ask AI","Ask anything"]];
@@ -356,8 +426,13 @@ else if(k==="task"){tab="tasks";openId=null;moreSub=null;render();setTimeout(fun
 else{tab="more";moreSub="ai";openId=null;render()}}}
 function hdr(t,o){o=o||{};return '<div class="hdr">'+(o.back?'<button class="ib" id="hb" aria-label="Back">'+ic("back")+'</button>':'<span class="logo">'+logo(36)+'</span>')+'<h1>'+t+'</h1>'+(o.badge?'<span class="badge">'+o.badge+'</span>':'')+'<div class="grow"></div>'+(o.noS?'':'<button class="ib" id="hs" aria-label="Search">'+ic("search")+'</button>')+(o.plus?'<button class="ib acc" id="hp" aria-label="Add">'+ic("plus")+'</button>':'')+'</div>'}
 document.addEventListener("click",function(e){var b=e.target.closest("#hb,#hs,#hp");if(!b)return;
-if(b.id==="hb"){moreSub=null;render()}else if(b.id==="hs"){tab="more";moreSub="search";openId=null;render()}else if(plusFn)plusFn()});
-function render(){plusFn=null;drawTabs();var f;
+if(b.id==="hb"){goBack()}else if(b.id==="hs"){tab="more";moreSub="search";openId=null;render()}else if(plusFn)plusFn()});
+var navStack=[],navLast=null,navRoot=false,navBacking=false,lastBack=0;
+function navNote(){var k=tab+"|"+(moreSub||"")+"|"+(openId||"");
+if(navRoot){navStack=[];navRoot=false}
+else if(navLast&&navLast.k!==k&&!navBacking&&!navLast.s.openId){navStack.push(navLast.s);if(navStack.length>30)navStack.shift()}
+navLast={k:k,s:{tab:tab,openId:openId,moreSub:moreSub}}}
+function render(){navNote();plusFn=null;drawTabs();var f;
 if(tab==="more")f=moreRoute;else if(tab==="notes")f=openId?editor:notesV;else f={home:homeView,rec:recV,tasks:tasksView}[tab];
 f();window.scrollTo(0,0)}
 function moreRoute(){var m={cal:calV,rem:remV,al:alarmV,ai:aiView,search:searchView,set:setView,theme:themeView,trash:trashView,bk:backupView,sub:subView,files:filesView,photos:photosView,help:helpView,notif:notifView};(m[moreSub]||moreView)()}
@@ -416,7 +491,8 @@ function flush(){clearTimeout(encT);if(!n.pv)return Promise.resolve();return enc
 function touch(){cur.t=$("nt").value;cur.b=$("nb").value;n.ts=Date.now();
 if(n.pv){clearTimeout(encT);$("st").textContent="Saving…";encT=setTimeout(function(){flush().then(function(){var t=$("st");if(t)t.textContent="Saved and encrypted."})},400)}else{save();$("st").textContent="Saved."}}
 $("nt").oninput=touch;$("nb").oninput=touch;bindAtt(n,cur,flush);bindLinks(n,cur,flush);
-$("back").onclick=function(){stopRec();(window.stopV?window.stopV():Promise.resolve()).then(flush).then(function(){openId=null;render()})};
+window.edBack=function(){stopRec();return Promise.resolve(window.stopV?window.stopV():0).then(flush)};
+$("back").onclick=function(){goBack()};
 $("ecat").onchange=function(){n.cat=this.value;this.className="catsel c-"+n.cat;save()};
 function reading(on){$("nb").style.display=on?"none":"";$("rd").style.display=on?"block":"none";$("mEd").className=on?"":"on";$("mRd").className=on?"on":"";$("etool").style.display=on?"none":"";if(on)$("rd").innerHTML=md(cur.b)||'<p class="hint">Nothing written yet.</p>'}
 $("mEd").onclick=function(){reading(false)};$("mRd").onclick=function(){reading(true)};
@@ -657,14 +733,14 @@ var el=showSheet('<h3>Ask AI about this note</h3>'+(n.pv?'<p class="hint">Privat
 if(n.pv)return;var last="";
 function run(q){if(!q.trim())return;var r=$("nres");if(!aiCfg()){r.innerHTML='<p class="hint">Connect the AI service first.</p>';return}
 r.innerHTML='<div class="bub typing"><i></i><i></i><i></i></div>';
-aiCall("chat",{messages:[{role:"user",content:"Note title: "+(cur.t||"Untitled")+"\nNote text:\n"+String(cur.b||"").slice(0,7000)+"\n\n"+q}]}).then(function(x){last=x.text;r.innerHTML='<div class="bub ai"><div class="md">'+md(last)+'</div><span class="meta">via '+esc(x.provider)+'</span>'+actsHtml("n",last)+'</div>'}).catch(function(e){r.innerHTML='<p class="hint">'+esc(e.message||"AI is not reachable right now.")+'</p>'})}
+aiCall("chat",{messages:[{role:"user",content:"Note title: "+(cur.t||"Untitled")+"\nNote text:\n"+String(cur.b||"").slice(0,7000)+"\n\n"+q}]}).then(function(x){last=x.text;r.innerHTML='<div class="bub ai"><div class="md">'+md(last)+'</div>'+actsHtml("n",last)+'</div>'}).catch(function(e){r.innerHTML='<p class="hint">'+esc(e.message||"AI is not reachable right now.")+'</p>'})}
 el.addEventListener("click",function(e){var c=e.target.closest("[data-nq]"),a=e.target.closest("[data-act]");
 if(c){run(PR[c.getAttribute("data-nq")]);return}
 if(e.target.closest("#nsend")){var v=$("nai").value;$("nai").value="";run(v);return}
 if(a){var k=a.getAttribute("data-act");if(k==="add"){closeSheet();onAdd(last)}else if(k==="tasks")makeTasks(taskLines(last));else copyText(last)}});
 $("nai").onkeydown=function(e){if(e.key==="Enter"){var v=this.value;this.value="";run(v)}}}
 function aiDraw(typing){var c=$("chat");if(!c)return;var a=chatArr();
-c.innerHTML=a.map(function(m,i){return m.me?'<div class="bub me">'+esc(m.t).replace(/\n/g,"<br>")+'</div>':'<div class="bub ai"><div class="md">'+md(m.t)+'</div>'+(m.via?'<span class="meta">via '+esc(m.via)+'</span>':'')+actsHtml(i,m.t)+'</div>'}).join("")+(typing?'<div class="bub typing"><i></i><i></i><i></i></div>':"");
+c.innerHTML=a.map(function(m,i){return m.me?'<div class="bub me">'+esc(m.t).replace(/\n/g,"<br>")+'</div>':'<div class="bub ai"><div class="md">'+md(m.t)+'</div>'+actsHtml(i,m.t)+'</div>'}).join("")+(typing?'<div class="bub typing"><i></i><i></i><i></i></div>':"");
 if(a.length)window.scrollTo(0,document.body.scrollHeight)}
 function aiCfg(){var a=(S.set&&S.set.ai)||{},u=(a.url||CONFIG.api||"").trim().replace(/\/+$/,"");return u?{url:u,token:(a.token||"").trim()}:null}
 function aiCall(task,payload){var c=aiCfg();if(!c)return Promise.reject(new Error("AI service is not set up"));
@@ -773,6 +849,23 @@ $("app").onclick=function(e){var r=e.target.closest("[data-nv]");if(r)goTo(r.get
 function helpView(){
 var Q=[["How do I put an AI answer into a note?","Tap Add to Note under any AI answer, then choose a note or create a new one. AI answers never save themselves."],["Are my private notes sent to AI?","No. Private notes are encrypted with your PIN and are never sent to AI."],["How do I back up my data?","Open More, then Backup and restore. You get one encrypted file protected by a password you choose."],["I deleted something by mistake.","Open More, then Trash. Deleted items stay there for 30 days."],["How do I turn a recording into tasks?","Record in Voice Recorder, then use the transcript and action items to create tasks."]];
 $("app").innerHTML=hdr("Help & Support",{back:1,noS:1})+Q.map(function(q){return '<div class="card"><b>'+q[0]+'</b><p class="hint" style="font-size:.92rem">'+q[1]+'</p></div>'}).join("")+'<p class="hint">Universal AI Notebook · Capture · Organize · Achieve</p>'}
+
+/* ANDROID BACK BUTTON */
+function navPop(){
+if(navStack.length){var st=navStack.pop();navBacking=true;tab=st.tab;openId=st.openId;moreSub=st.moreSub;render();navBacking=false;return true}
+if(tab!=="home"||moreSub||openId){tab="home";openId=null;moreSub=null;navRoot=true;render();return true}
+return false}
+function goBack(){
+var sh=document.getElementById("sheet2");if(sh){sh.remove();return true}
+if(tab==="notes"&&openId&&window.edBack){var ed=window.edBack;window.edBack=null;Promise.resolve(ed()).then(function(){navPop()},function(){navPop()});return true}
+return navPop()}
+function exitOrWarn(){var AP=P("App");if(Date.now()-lastBack<2000){lastBack=0;if(AP&&AP.exitApp)AP.exitApp()}else{lastBack=Date.now();toast("Press back again to exit")}}
+function onBack(){
+var lk=$("lock");if(lk&&lk.style.display==="block"){var lb=$("lbk");if(lb&&lb.style.visibility!=="hidden"){lb.click();return}exitOrWarn();return}
+var g=$("gate");if(g&&g.style.display==="block"){if($("an")||($("ae")&&!$("afg"))){var sw=$("asw");if(sw){sw.click();return}}exitOrWarn();return}
+if(goBack())return;
+exitOrWarn()}
+function initBack(){var AP=P("App");if(!AP||!AP.addListener||window.__backReg)return;window.__backReg=1;AP.addListener("backButton",onBack)}
 
 /* ACCOUNTS: onboarding and sign in (Supabase Auth over plain fetch, no SDK) */
 var CONFIG={api:"",supaUrl:"",supaKey:""};
@@ -1204,6 +1297,7 @@ setTimeout(function(){$("splash").classList.add("out")},1300);
 gateCheck();
 if(S.pin)showLock();
 purgeOld();
+initBack();
 render();sync();
 })();
 </script>
