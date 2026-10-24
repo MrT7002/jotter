@@ -51,6 +51,7 @@ button:active{transform:scale(.95)}
 .meta{color:var(--mute);font-size:.75rem;display:block;margin-top:2px}
 .late{color:var(--bad);font-weight:600;font-size:.875rem;display:block}
 .empty{color:var(--mute);padding:20px 4px;text-align:center}
+.cn-w{border-color:#F59E0B}.cn-e{border-color:var(--bad)}.cn-o{border-color:#10B981}
 .hint{font-size:.85rem;color:var(--mute);margin:6px 0 0}
 .chev{color:var(--mute)}
 .x{background:none;border:0;color:var(--mute);padding:6px 8px;font-size:.875rem;display:inline-flex}
@@ -366,6 +367,7 @@ button:active,.btn:active,.item:active,.qt:active,.tile:active{transform:scale(.
 <div id="lock"></div>
 <div id="app"></div>
 <nav><div id="tabs"></div></nav>
+<script src="config.js"></script>
 <script>
 (function(){
 var SKEY="jotter-v1",tab="home",openId=null,q="",S={notes:[],tasks:[],rem:[],ev:[],al:[],rec:[],links:[],trash:[],cur:"all",set:{theme:"light",sys:true,fs:"m",name:"",v2:1}};
@@ -740,14 +742,14 @@ if(e.target.closest("#nsend")){var v=$("nai").value;$("nai").value="";run(v);ret
 if(a){var k=a.getAttribute("data-act");if(k==="add"){closeSheet();onAdd(last)}else if(k==="tasks")makeTasks(taskLines(last));else copyText(last)}});
 $("nai").onkeydown=function(e){if(e.key==="Enter"){var v=this.value;this.value="";run(v)}}}
 function aiDraw(typing){var c=$("chat");if(!c)return;var a=chatArr();
-c.innerHTML=a.map(function(m,i){return m.me?'<div class="bub me">'+esc(m.t).replace(/\n/g,"<br>")+'</div>':'<div class="bub ai"><div class="md">'+md(m.t)+'</div>'+actsHtml(i,m.t)+'</div>'}).join("")+(typing?'<div class="bub typing"><i></i><i></i><i></i></div>':"");
+c.innerHTML=a.map(function(m,i){return m.me?'<div class="bub me">'+esc(m.t).replace(/\n/g,"<br>")+'</div>':'<div class="bub ai"><div class="md">'+md(m.t)+'</div>'+(m.retryQ?'<div class="acts"><button class="ghost sm" data-act="retry" data-i="'+i+'">Retry</button></div>':'')+actsHtml(i,m.t)+'</div>'}).join("")+(typing?'<div class="bub typing"><i></i><i></i><i></i></div>':"");
 if(a.length)window.scrollTo(0,document.body.scrollHeight)}
-function aiCfg(){var a=(S.set&&S.set.ai)||{},u=(a.url||CONFIG.api||"").trim().replace(/\/+$/,"");return u?{url:u,token:(a.token||"").trim()}:null}
+function aiCfg(){var a=CONFIG.dev?((S.set&&S.set.ai)||{}):{},u=(a.url||CONFIG.api||"").trim().replace(/\/+$/,"");return u?{url:u,token:(a.token||"").trim()}:null}
 function aiCall(task,payload){var c=aiCfg();if(!c)return Promise.reject(new Error("AI service is not set up"));
 return getToken().then(function(tok){
 var ctl=new AbortController(),t=setTimeout(function(){ctl.abort()},60000),h={"Content-Type":"application/json"};if(c.token)h["x-app-token"]=c.token;if(tok)h.Authorization="Bearer "+tok;
 var body=Object.assign({task:task},payload);if(S.set.aiStyle&&S.set.aiStyle!=="balanced")body.options=Object.assign({style:S.set.aiStyle},body.options||{});
-return fetch(c.url+"/api/ai",{method:"POST",headers:h,body:JSON.stringify(body),signal:ctl.signal}).then(function(r){return r.json().catch(function(){return{success:false,error:"Unexpected reply from the AI service"}})}).then(function(j){clearTimeout(t);if(j&&j.usage){S.set.usage=j.usage;try{localStorage.setItem(SKEY,JSON.stringify(S))}catch(e){}}if(!j||!j.success){var er=new Error((j&&j.error)||"AI request failed");er.code=j&&j.code;throw er}return j}).catch(function(e){clearTimeout(t);throw e})})}
+return fetch(c.url+"/api/ai",{method:"POST",headers:h,body:JSON.stringify(body),signal:ctl.signal}).then(function(r){return r.json().catch(function(){return{success:false,error:"Unexpected reply from the AI service"}})}).then(function(j){clearTimeout(t);if(j&&j.usage){S.set.usage=j.usage;try{localStorage.setItem(SKEY,JSON.stringify(S))}catch(e){}}if(!j||!j.success){var er=new Error((j&&j.error)||"AI request failed");er.code=j&&j.code;throw er}return j}).catch(function(e){clearTimeout(t);if(e&&(e.name==="AbortError"||e instanceof TypeError)){var x=new Error(e.name==="AbortError"?"The AI server took too long to answer. It may be waking up.":"Can't reach the AI server. Check your internet connection.");x.code=e.name==="AbortError"?"timeout":"offline";setConn({state:"down",msg:x.message});throw x}throw e})})}
 function aiNotesText(){return S.notes.filter(function(n){return !n.pv&&(n.b||"").trim()}).sort(function(a,b){return b.ts-a.ts}).slice(0,5).map(function(n){return (n.t||"Untitled")+":\n"+n.b}).join("\n\n").slice(0,12000)}
 var aiAtt=[],aiPre="";
 var AIPRE={"Explain this topic":["Which topic should I explain?","Explain this clearly and simply: "],"Create a report":["What should the report be about?","Write a clear, well-structured report about: "],"Turn into tasks":["Paste or describe what to turn into tasks","Turn this into a short checklist of tasks (use - [ ] items): "],"Plan a project":["Describe your project","Help me plan this project with clear steps and a simple timeline: "]};
@@ -757,7 +759,7 @@ var ctx=aiAtt.map(function(id){var n=S.notes.filter(function(x){return x.id===id
 if(aiCfg()){var p;
 if(/summar/i.test(q)&&/notes?/i.test(q)&&!ctx){var txt=aiNotesText();p=txt?aiCall("summarize",{input:txt}):Promise.reject(new Error("You have no notes to summarize yet."))}
 else{var h=chatArr().slice(0,-1).slice(-6).map(function(m){return{role:m.me?"user":"assistant",content:String(m.t).slice(0,3000)}});while(h.length&&h[0].role!=="user")h.shift();h.push({role:"user",content:(ctx?"Use this context from my notes:\n"+ctx+"\n\n":"")+shown});p=aiCall("chat",{messages:h})}
-p.then(function(r){chatPush({t:r.text,via:r.provider+(r.fallback?" (backup)":"")});aiDraw(false)}).catch(function(e){var m=e&&e.code==="daily_limit"?e.message:e&&e.code==="unauthorized"?"Please sign in again to use AI.":aiAnswer(q)+"\n\nOnline AI is not reachable right now, so this answer comes from your saved data only.";chatPush({t:m,off:1});aiDraw(false)});return}
+p.then(function(r){chatPush({t:r.text,via:r.provider+(r.fallback?" (backup)":"")});aiDraw(false)}).catch(function(e){var c=e&&e.code,net=(c==="timeout"||c==="offline"),m=c==="daily_limit"?e.message:c==="unauthorized"?"Please sign in again to use AI.":aiAnswer(q)+"\n\n"+(net?e.message+" This answer comes from your saved data only.":"Online AI is not reachable right now, so this answer comes from your saved data only.");chatPush({t:m,off:1,retryQ:(net||!c)?q:undefined});aiDraw(false)});return}
 var a=aiAnswer(q);setTimeout(function(){chatPush({t:a,off:1});aiDraw(false)},600)}
 function drawAtt(){var r=$("attrow");if(!r)return;r.innerHTML=aiAtt.map(function(id){var n=S.notes.filter(function(x){return x.id===id})[0];return n?'<button class="chip on" data-rm="'+id+'">'+esc((n.t||"Untitled").slice(0,22))+' \u2715</button>':""}).join("")}
 function pickNotes(done){var el=showSheet('<h3>Attach notes</h3><p class="hint">The AI will read them to answer. Private notes are never shown here.</p><div id="pl"></div><button class="btn full" id="pdone">Done</button>');
@@ -766,14 +768,14 @@ list();el.addEventListener("click",function(e){var r=e.target.closest("[data-pk]
 function aiView(){
 var CH=["Explain this topic","Summarize my notes","Create a report","Turn into tasks","Plan a project","Compare notes","Find information"];
 $("app").innerHTML='<div class="aihead"><button class="ib" id="hb" aria-label="Back">'+ic("back")+'</button>'+logo(38)+'<div class="grow"><b>AI Assistant</b><span class="pre">Ask anything about your notes, files or ideas.</span></div></div>'+
-(aiCfg()?'':'<div class="card" style="display:flex;gap:10px;align-items:center"><span class="ico g4">'+ic("alert")+'</span><span class="pre" style="-webkit-line-clamp:4">Online AI is not connected yet. Answers come from your saved data only.</span></div>')+
+(aiCfg()?'<div data-conn="ai"></div>':'<div class="card" style="display:flex;gap:10px;align-items:center"><span class="ico g4">'+ic("alert")+'</span><span class="pre" style="-webkit-line-clamp:4">Online AI is not connected yet. Answers come from your saved data only.</span></div>')+
 '<div class="chips">'+CH.map(function(c){return '<button class="chip" data-q="'+c+'">'+c+'</button>'}).join("")+'</div><div id="chat"></div><div id="attrow" class="chips wrap" style="margin-top:8px"></div>'+
 '<div class="compose"><button class="ib" id="aatt" aria-label="Attach notes">'+ic("clip")+'</button><input id="aq" placeholder="Ask a question..." aria-label="Ask a question">'+(canListen()?'<button class="ib" id="amic" aria-label="Voice input">'+ic("mic")+'</button>':'')+'<button class="ib acc" id="asend" aria-label="Send">'+ic("send")+'</button></div>';
-aiDraw(false);drawAtt();
+aiDraw(false);drawAtt();connPaint();if(aiCfg()&&(CONN.state==="idle"||CONN.state==="down"||(CONN.state==="ok"&&Date.now()-(CONN.t||0)>30000)||(CONN.state==="ok"&&Date.now()-CONN.t>300000)))connCheck();
 function send(){var v=$("aq").value;$("aq").value="";aiAsk(v)}
 $("app").onclick=function(e){var q=e.target.closest("[data-q]"),act=e.target.closest("[data-act]"),rm=e.target.closest("[data-rm]");
 if(rm){aiAtt=aiAtt.filter(function(x){return x!==rm.getAttribute("data-rm")});drawAtt();return}
-if(act){var i=+act.getAttribute("data-i"),m=chatArr()[i],k=act.getAttribute("data-act");if(!m)return;if(k==="add")addToNoteFlow(m.t);else if(k==="tasks")makeTasks(taskLines(m.t));else copyText(m.t);return}
+if(act){var i=+act.getAttribute("data-i"),m=chatArr()[i],k=act.getAttribute("data-act");if(!m)return;if(k==="retry"){if(m.retryQ){var q0=m.retryQ,ar=chatArr();ar.splice(i,1);if(ar[i-1]&&ar[i-1].me)ar.splice(i-1,1);save();aiDraw(false);aiAsk(q0)}return}if(k==="add")addToNoteFlow(m.t);else if(k==="tasks")makeTasks(taskLines(m.t));else copyText(m.t);return}
 if(!q)return;var c=q.getAttribute("data-q");
 if(AIPRE[c]){aiPre=AIPRE[c][1];$("aq").placeholder=AIPRE[c][0];$("aq").focus();return}
 if(c==="Find information"){$("aq").placeholder="Type a word to look for...";$("aq").focus();return}
@@ -803,10 +805,10 @@ $("app").innerHTML=hdr("Settings",{back:1,noS:1})+
 '<div class="sect" id="secs">Privacy &amp; Security</div>'+secHtml().replace('<h2>Security</h2>','')+
 '<div class="card"><div class="rowb" data-m="bk" style="cursor:pointer"><div class="grow"><b>Data controls</b><span class="pre">Backup and restore, Trash</span></div>'+ic("chev")+'</div><div class="rowb" data-m="trash" style="cursor:pointer"><div class="grow"><b>Trash</b><span class="pre">Deleted items stay 30 days</span></div>'+ic("chev")+'</div><div class="rowb"><div class="grow"><b>Delete all data on this phone</b><span class="pre">Removes notes, tasks, recordings and settings</span></div><button class="ghost sm" id="wp" style="color:var(--bad)">Delete</button></div><div class="rowb" style="opacity:.6"><div class="grow"><b>Delete account</b><span class="pre">Coming soon</span></div></div></div>'+
 '<div class="sect">Subscription</div><div class="card"><div class="rowb"><div class="grow"><b>Current plan</b><span class="pre">'+planName()+' plan</span></div><button class="ghost sm" data-m="sub">Upgrade</button></div></div>'+
-'<div class="sect">Developer</div>'+aiSvcHtml().replace('<h2>AI service</h2>','')+
+(CONFIG.dev?'<div class="sect">Developer</div>'+aiSvcHtml().replace('<h2>AI service</h2>',''):'')+'<div class="sect">Connection</div><div data-conn="set"></div>'+
 '<div class="item" data-m="about"><span class="ico g1">'+ic("spark")+'</span><div class="grow"><b>About Universal AI Notebook</b><span class="pre">Capture · Organize · Achieve</span></div></div>';
 $("tfs").value=S.set.fs||"m";$("ais").value=S.set.aiStyle||"balanced";
-bindSec();bindAiSvc();
+bindSec();bindAiSvc();connPaint();if(aiCfg()&&(CONN.state==="idle"||CONN.state==="down"||(CONN.state==="ok"&&Date.now()-(CONN.t||0)>30000)))connCheck();
 $("nm").oninput=function(){S.set.name=this.value;var a=$("avb");if(a&&!S.set.photo)a.textContent=(this.value.trim()||(SESS&&SESS.user.email)||"U").charAt(0).toUpperCase();save()};
 $("chp").onclick=function(){pickPhoto(setView)};
 var pw=$("chpw");if(pw)pw.onclick=function(){var v=prompt("New password (at least 6 characters)");if(!v)return;getToken().then(function(tok){return authReq("/user","PUT",{password:v},tok)}).then(function(){toast("Password changed")}).catch(function(e){alert(e.message)})};
@@ -868,9 +870,10 @@ exitOrWarn()}
 function initBack(){var AP=P("App");if(!AP||!AP.addListener||window.__backReg)return;window.__backReg=1;AP.addListener("backButton",onBack)}
 
 /* ACCOUNTS: onboarding and sign in (Supabase Auth over plain fetch, no SDK) */
-var CONFIG={api:"",supaUrl:"",supaKey:""};
+var JC=window.JOTTER_CONFIG||{},CONFIG={api:String(JC.apiUrl||"").trim().replace(/\/+$/,""),supaUrl:String(JC.supabaseUrl||"").trim().replace(/\/+$/,""),supaKey:String(JC.supabaseAnonKey||"").trim(),dev:JC.showDeveloper===true};
+var RC=null,RCP=null,RCST="idle",RCMSG="",GUESTNOW=false;try{RC=JSON.parse(localStorage.getItem("uain-rcfg")||"null")}catch(e){}
 var SESS=null;try{SESS=JSON.parse(localStorage.getItem("uain-session")||"null")}catch(e){}
-function authCfg(){var a=(S.set&&S.set.auth)||{},u=(a.url||CONFIG.supaUrl||"").trim().replace(/\/+$/,""),k=(a.key||CONFIG.supaKey||"").trim();return u&&k?{url:u,key:k}:null}
+function authCfg(){var a=CONFIG.dev?((S.set&&S.set.auth)||{}):{},ra=(RC&&RC.auth)||{},u=(a.url||CONFIG.supaUrl||ra.url||"").trim().replace(/\/+$/,""),k=(a.key||CONFIG.supaKey||ra.key||"").trim();return u&&k?{url:u,key:k}:null}
 function saveSess(x){SESS=x;try{if(x)localStorage.setItem("uain-session",JSON.stringify(x));else localStorage.removeItem("uain-session")}catch(e){}}
 function friendly(m){var l=String(m).toLowerCase();
 if(/invalid login|invalid_grant|invalid credentials/.test(l))return"Wrong email or password.";
@@ -893,12 +896,42 @@ function recoverPw(email){var c=aiCfg(),q=c?"?redirect_to="+encodeURIComponent(c
 function getToken(){if(!SESS)return Promise.resolve(null);if(Date.now()<SESS.exp)return Promise.resolve(SESS.at);
 return authReq("/token?grant_type=refresh_token","POST",{refresh_token:SESS.rt}).then(function(j){saveSess(sessFrom(j));return SESS.at}).catch(function(e){if(e&&(e.status===400||e.status===401)){saveSess(null);gateCheck()}return null})}
 function signOutNow(){var at=SESS&&SESS.at;saveSess(null);if(at)authReq("/logout","POST",null,at).catch(function(){})}
-function needGate(){if(!S.set.onb)return"onb";if(authCfg()&&!SESS&&!S.set.guest)return"auth";return null}
+/* CONNECTION: central backend + automatic Supabase settings */
+function timedFetch(url,ms){var ctl=new AbortController(),t=setTimeout(function(){ctl.abort()},ms);
+return fetch(url,{signal:ctl.signal,cache:"no-store"}).then(function(r){clearTimeout(t);if(!r.ok){var e=new Error("http");e.code="http";e.status=r.status;throw e}return r.json().catch(function(){var b=new Error("bad");b.code="bad";throw b})},function(e){clearTimeout(t);var x=new Error(e&&e.name==="AbortError"?"timeout":"offline");x.code=e&&e.name==="AbortError"?"timeout":"offline";throw x})}
+function connMsg(e){var c=e&&e.code;return c==="timeout"?"The server took too long to answer. It may be waking up.":c==="http"?"The server returned an error ("+e.status+"). Try again in a moment.":c==="bad"?"The server sent an unexpected reply.":"Can't reach the server. Check your internet connection."}
+function rcSafe(j){var a=j&&j.auth;if(!a)return null;var u=String(a.url||"").trim().replace(/\/+$/,""),k=String(a.key||"").trim();
+if(!(/^https:\/\/[^\s\/]+/i.test(u)||/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(u))||!k)return null;
+if(/^sb_secret_/i.test(k))return null;var p=k.split(".");if(p.length===3){try{var pl=JSON.parse(atob(p[1].replace(/-/g,"+").replace(/_/g,"/")));if(String(pl.role).toLowerCase()==="service_role")return null}catch(e){}}
+return{url:u,key:k}}
+function loadRC(){var c=aiCfg();if(!c)return Promise.resolve(null);if(RCP)return RCP;
+RCP=timedFetch(c.url+"/api/config",65000).then(function(j){RCP=null;if(!j||j.success!==true){var e=new Error("bad");e.code="bad";throw e}RC={auth:rcSafe(j),authRequired:!!j.authRequired,notice:j.notice||"",t:Date.now()};try{localStorage.setItem("uain-rcfg",JSON.stringify(RC))}catch(x){}return RC},function(e){RCP=null;throw e});return RCP}
+function bootRC(){if(!aiCfg()||(CONFIG.supaUrl&&CONFIG.supaKey))return Promise.resolve();
+RCST=RC?"ok":"loading";if(!RC){gateCheck();setTimeout(function(){var m=$("gcm");if(m&&RCST==="loading")m.textContent="Waking up the server… the first time can take up to a minute."},5000)}
+return loadRC().then(function(){RCST="ok";gateCheck();render()},function(e){if(!RC){RCST="fail";RCMSG=connMsg(e);gateCheck()}})}
+var CONN={state:"idle"},CONNP=null;
+function setConn(o){CONN=o;connPaint()}
+function connCheck(){var c=aiCfg();if(!c){setConn({state:"none"});return Promise.resolve()}if(CONNP)return CONNP;
+setConn({state:"checking",slow:false});var t1=setTimeout(function(){if(CONN.state==="checking"){CONN.slow=true;connPaint()}},4000);
+CONNP=timedFetch(c.url+"/health",65000).then(function(j){var pr=(j&&j.providers)||{},any=Object.keys(pr).some(function(k){return pr[k]});setConn({state:any?"ok":"noprov",t:Date.now()})},function(e){setConn({state:"down",msg:connMsg(e)})}).then(function(){clearTimeout(t1);CONNP=null});return CONNP}
+function connView(){var st=CONN.state;
+if(st==="checking")return{tone:"w",t:CONN.slow?"Waking up the AI server… this can take up to a minute the first time.":"Connecting to the AI server…",retry:false};
+if(st==="down")return{tone:"e",t:CONN.msg+" Answers use your saved data only.",retry:true};
+if(st==="noprov")return{tone:"e",t:"The AI server is running but has no AI keys set up yet.",retry:true};
+if(st==="ok")return{tone:"o",t:"Connected",retry:false};return null}
+function connCard(v,full){return '<div class="card cn cn-'+v.tone+'"><div class="row"><span class="ico '+(v.tone==="e"?"g6":v.tone==="o"?"g1":"g4")+'">'+ic(v.tone==="o"?"check":"alert")+'</span><div class="grow"><b>'+(full?"Connection":"AI server")+'</b><span class="pre" style="-webkit-line-clamp:5">'+esc(v.t)+'</span></div>'+(v.retry?'<button class="ghost sm" data-retry="1">Retry</button>':"")+'</div></div>'}
+function connPaint(){var v=connView();[].forEach.call(document.querySelectorAll("[data-conn]"),function(el){var k=el.getAttribute("data-conn");
+if(k==="ai")el.innerHTML=(v&&v.tone!=="o")?connCard(v):"";else el.innerHTML=connCard(v||{tone:"n",t:aiCfg()?"Not checked yet.":"No server is configured.",retry:!!aiCfg()},true)})}
+document.addEventListener("click",function(e){if(e.target.closest("[data-retry]"))connCheck()});
+function needGate(){if(!S.set.onb)return"onb";if(aiCfg()&&!(CONFIG.supaUrl&&CONFIG.supaKey)&&!RC&&!GUESTNOW)return RCST==="fail"?"connfail":"conn";if(authCfg()&&!SESS&&!S.set.guest&&!GUESTNOW)return"auth";return null}
 function gateCheck(){var g=needGate(),G=$("gate");if(!G)return;if(!g){G.style.display="none";G.innerHTML="";return}gateShow(g)}
 function gateShow(g,mode){
 var G=$("gate");G.style.display="block";G.scrollTop=0;
 if(g==="onb"){G.innerHTML='<div class="onb"><div class="gw">'+logo(92)+'<h1>Universal AI Notebook</h1><p style="font-size:1.1rem;color:#fff;font-weight:600">Your AI-Powered Notebook and Personal Assistant</p><p>Capture, organize, understand and manage all your information in one place.</p><div class="feats">'+[["note","Capture Anything"],["cal","Organize Smartly"],["spark","Get AI Insights"],["check","Achieve More"]].map(function(f){return '<div class="feat"><span>'+ic(f[0])+'</span>'+f[1]+'</div>'}).join("")+'</div><button class="gbtn" id="gs">Get Started '+ic("chev")+'</button></div></div>';
 $("gs").onclick=function(){S.set.onb=1;save();gateCheck()};return}
+if(g==="conn"){G.innerHTML='<div class="gw auth" style="text-align:center"><div style="margin-top:14vh">'+logo(72)+'</div><h1>Connecting…</h1><p class="sub" id="gcm">Setting things up. The first time can take up to a minute.</p><div class="dots" style="justify-content:center;margin-top:18px"><i></i><i></i><i></i><i></i><i></i></div></div>';return}
+if(g==="connfail"){G.innerHTML='<div class="gw auth" style="text-align:center"><div style="margin-top:14vh">'+logo(72)+'</div><h1>Can\'t connect</h1><p class="sub" id="gcm">'+esc(RCMSG||"Can't reach the server.")+'</p><button class="gbtn" id="gretry" style="margin-top:18px">Try again</button><div class="foot"><button class="lnk" id="gofl" style="font-weight:500;color:var(--mute)">Continue without an account</button></div></div>';
+$("gretry").onclick=function(){RCST="loading";gateCheck();bootRC()};$("gofl").onclick=function(){GUESTNOW=true;gateCheck();render()};return}
 var m=mode||"in",h='<div class="gw auth">',soon=function(ico,t){return '<button class="obtn" disabled>'+ico+t+'<span class="soon">Soon</span></button>'};
 h+='<div style="text-align:center;margin-top:8px">'+logo(64)+'</div>';
 if(m==="in"){h+='<h1>Welcome to Universal AI Notebook</h1><p class="sub">Sign in to continue</p><label for="ae">Email</label><input id="ae" type="email" autocomplete="email" placeholder="you@example.com"><label for="ap">Password</label><input id="ap" type="password" autocomplete="current-password" placeholder="Your password"><div style="text-align:right"><button class="lnk" id="afg">Forgot password?</button></div><button class="gbtn" id="ab" style="margin-top:6px">Sign in</button><div class="amsg" id="am"></div><div class="or">or</div><div style="display:grid;gap:10px">'+soon(ic("google"),"Continue with Google")+soon(ic("apple"),"Continue with Apple")+soon(ic("phone"),"Use mobile number")+'</div><div class="foot">Don\'t have an account? <button class="lnk" id="asw">Create account</button><br><button class="lnk" id="ags" style="font-weight:500;color:var(--mute);margin-top:6px">Continue without an account</button></div>'}
@@ -1294,7 +1327,8 @@ var hid=0;document.addEventListener("visibilitychange",function(){if(document.hi
 applyTheme();
 $("splash").innerHTML='<div class="sl"><span class="sg">'+logo(84)+'</span><div class="sn">Universal AI Notebook</div><div class="stg">Your Ideas. Smarter.</div><div class="ld"><i></i></div></div>';
 setTimeout(function(){$("splash").classList.add("out")},1300);
-gateCheck();
+if(!CONFIG.dev&&S.set&&(S.set.ai||S.set.auth)){delete S.set.ai;delete S.set.auth;save()}
+gateCheck();bootRC();
 if(S.pin)showLock();
 purgeOld();
 initBack();
